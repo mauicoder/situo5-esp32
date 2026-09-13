@@ -6,7 +6,7 @@ title: "[feat]: "
 labels: ["enhancement"]
 
 # TODO https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/adding-items-automatically
-# projects: ['iown-homecontrol/1', 'iown-homecontrol/44']
+# projects: ['situo5-esp32/1', 'situo5-esp32/44']
 
 assignees:
   - mauicoder

@@ -86,7 +86,7 @@ void publishDiscovery() {
     gatewayPayload += "\"identifiers\": [\"" + deviceIdentifier + "\"],";
     gatewayPayload += "\"name\": \"ESP32 io-homecontrol Gateway\",";
     gatewayPayload += "\"model\": \"" + String(BoardHAL::getBoardName()) + "\",";
-    gatewayPayload += "\"manufacturer\": \"iown-homecontrol\"";
+    gatewayPayload += "\"manufacturer\": \"situo5-esp32\"";
     gatewayPayload += "}";
     gatewayPayload += "}";
 
@@ -120,7 +120,7 @@ void publishDiscovery() {
             payload += "\"name\": \"" + name + "\",";
             payload += "\"via_device\": \"" + deviceIdentifier + "\",";
             payload += "\"model\": \"io-homecontrol Device\",";
-            payload += "\"manufacturer\": \"iown-homecontrol\"";
+            payload += "\"manufacturer\": \"situo5-esp32\"";
             payload += "}";
             payload += "}";
 

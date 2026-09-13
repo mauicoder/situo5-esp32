@@ -1,12 +1,12 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/squidfunk/mkdocs-material/master/docs/schema.json
-site_name: iown-homecontrol™ Documentation
+site_name: situo5-esp32™ Documentation
 site_url: https://github.com/mauicoder/situo5-esp32
 site_description: io-homecontrol Documentation and Implementation
 site_author: mauicoder
 repo_name: iown™
-repo_url: https://github.com/mauicoder/iown-homecontrol/
+repo_url: https://github.com/mauicoder/situo5-esp32/
 edit_uri: blog/main/docs/ # edit/main/docs/
-copyright: '&copy; <a href="https://github.com/mauicoder/iown-homecontrol/">iown-homecontrol™</a>'
+copyright: '&copy; <a href="https://github.com/mauicoder/situo5-esp32/">situo5-esp32™</a>'
 # site_dir: .cache/site # output folder: put in '.cache' to unclutter structure
 exclude_docs: | # Files to exclude from the built site.
   assets/images/patents
@@ -101,7 +101,7 @@ extra:
     - icon: material/home
       link: 'https://github.com/mauicoder/situo5-esp32'
     - icon: material/github
-      link: 'https://github.com/mauicoder/iown-homecontrol'
+      link: 'https://github.com/mauicoder/situo5-esp32'
   status: # ☠❌❗❕❓❔
     beta: Document in beta status
     WIP: Document is unfinished

@@ -1,4 +1,4 @@
-# Syntax Coloring Map For iown-homecontrol
+# Syntax Coloring Map For situo5-esp32
 #
 # Library Keyword list. When a keyword of any installed library is used in a sketch the Arduino IDE colors it.
 

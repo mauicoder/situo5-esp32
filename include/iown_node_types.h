@@ -1,6 +1,6 @@
 /**
   * @file    iown_node_types.h
-  * @author  iown-homecontrol
+  * @author  situo5-esp32
   * @brief   MAC layer definitions and functions
   *
   * #include <LibraryFile.h>

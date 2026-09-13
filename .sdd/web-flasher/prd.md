@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Users of the iown-homecontrol project who purchase microcontrollers (such as the Heltec WiFi LoRa 32 V3 or LilyGO T3 V1.6) often face friction when attempting to flash the firmware onto their physical boards. Currently, flashing requires cloning the git repository, setting up Python and PlatformIO locally, installing appropriate USB drivers, and running command-line build/upload tools. This technical barrier prevents non-developer users or quick evaluators from easily setting up and updating their iown-homecontrol hardware.
+Users of the situo5-esp32 project who purchase microcontrollers (such as the Heltec WiFi LoRa 32 V3 or LilyGO T3 V1.6) often face friction when attempting to flash the firmware onto their physical boards. Currently, flashing requires cloning the git repository, setting up Python and PlatformIO locally, installing appropriate USB drivers, and running command-line build/upload tools. This technical barrier prevents non-developer users or quick evaluators from easily setting up and updating their situo5-esp32 hardware.
 
 ## Solution
 

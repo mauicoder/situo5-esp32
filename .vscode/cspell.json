@@ -6,7 +6,7 @@
   //   "cacheStrategy": "metadata",
   //   "useCache": true
   // },
-  "description": "iown-homecontrol project specific words and configuration",
+  "description": "situo5-esp32 project specific words and configuration",
   "dictionaries": [
     "!ada",
     "!aws",
@@ -54,7 +54,7 @@
     "en_us",
     "filetypes",
     "fullstack",
-    "iown-homecontrol",
+    "situo5-esp32",
     "lua",
     "networking-terms",
     "node",
@@ -68,10 +68,10 @@
   "dictionaryDefinitions": [
     {
       "addWords": true,
-      "description": "iown-homecontrol words",
-      "name": "iown-homecontrol",
+      "description": "situo5-esp32 words",
+      "name": "situo5-esp32",
       "noSuggest": false,
-      "path": "cspell-iown-homecontrol-words.txt",
+      "path": "cspell-situo5-esp32-words.txt",
       "scope": "workspace",
       "type": "W"
     }
@@ -96,7 +96,7 @@
   // "language": "en-US",
   "maxDuplicateProblems": 1,
   "maxNumberOfProblems": 69,
-  "name": "iown-homecontrol",
+  "name": "situo5-esp32",
   "useGitignore": true,
   "usePnP": false,
   "validateDirectives": false,

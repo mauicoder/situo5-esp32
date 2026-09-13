@@ -1,6 +1,6 @@
 <div align="center" width="100%">
 
-# Contributing to iown-homecontrol
+# Contributing to situo5-esp32
 
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
@@ -164,7 +164,7 @@ This project is mainly developed on Windows, however a few potential gotchas nee
 
 ### Visual Studio Code
 
-iown-homecontrol is intended to be used with [Visual Studio Code (VSCode) and the Platform.IO extension](../.vscode/settings.json). Essential extensions get automatically recommended on loading the folder. If you are using another IDE feel free to add sane configurations so others can benefit from it.
+situo5-esp32 is intended to be used with [Visual Studio Code (VSCode) and the Platform.IO extension](../.vscode/settings.json). Essential extensions get automatically recommended on loading the folder. If you are using another IDE feel free to add sane configurations so others can benefit from it.
 
 > [!NOTE]
 > When opening the project folder in VSCode you will only see relevant files as the project workspace is configured to hide files which aren't needed for development.

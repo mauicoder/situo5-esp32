@@ -1,9 +1,9 @@
-# `iown-homecontrol` - AI Agent Context File
+# `situo5-esp32` - AI Agent Context File
 
-This document serves as the primary context reference for AI assistants and agents working on the `iown-homecontrol` repository.
+This document serves as the primary context reference for AI assistants and agents working on the `situo5-esp32` repository.
 
 ## Project Overview
-The `iown-homecontrol` project aims to reverse-engineer, document, and implement the proprietary **io-homecontrol (iohc)** wireless protocol used by smart home manufacturers like Somfy and Velux.
+The `situo5-esp32` project aims to reverse-engineer, document, and implement the proprietary **io-homecontrol (iohc)** wireless protocol used by smart home manufacturers like Somfy and Velux.
 The end goal is to create open-source libraries and hardware alternatives (like a custom LoRa32-based TaHoma gateway) to control these devices locally without relying on cloud services.
 
 ## Protocol Quick Reference
