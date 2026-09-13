@@ -30,6 +30,6 @@ RSSI
 Somfy
 twoway
 unmodulated
-Velocet
+mauicoder
 Velux
 WROVER

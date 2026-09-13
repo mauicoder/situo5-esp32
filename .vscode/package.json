@@ -1,10 +1,10 @@
 { // https: //docs.npmjs.com/cli/v10/configuring-npm/package-json
-  "author": "Velocet <git@mail.velocet.de> (https://github.com/velocet/)",
+  "author": "mauicoder <mauicoder@users.noreply.github.com> (https://github.com/mauicoder/)",
   "bugs": {
-    "url": "https://github.com/velocet/iown-homecontrol/issues/"
+    "url": "https://github.com/mauicoder/situo5-esp32/issues/"
   },
   "description": "io-homecontrol library",
-  "homepage": "https://github.com/Velocet/iown-homecontrol#readme",
+  "homepage": "https://github.com/mauicoder/situo5-esp32#readme",
   // "funding": [
   // "https://opencollective.com/iown-homecontrol"
   // {
@@ -24,7 +24,7 @@
   "repository": {
     "directory": ".vscode",
     "type": "git",
-    "url": "https://github.com/velocet/iown-homecontrol.git"
+    "url": "https://github.com/mauicoder/situo5-esp32.git"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

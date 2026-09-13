@@ -1,12 +1,12 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/squidfunk/mkdocs-material/master/docs/schema.json
 site_name: iown-homecontrol™ Documentation
-site_url: https://velocet.github.io/iown-homecontrol/
+site_url: https://github.com/mauicoder/situo5-esp32
 site_description: io-homecontrol Documentation and Implementation
-site_author: velocet
+site_author: mauicoder
 repo_name: iown™
-repo_url: https://github.com/velocet/iown-homecontrol/
+repo_url: https://github.com/mauicoder/iown-homecontrol/
 edit_uri: blog/main/docs/ # edit/main/docs/
-copyright: '&copy; <a href="https://github.com/velocet/iown-homecontrol/">iown-homecontrol™</a>'
+copyright: '&copy; <a href="https://github.com/mauicoder/iown-homecontrol/">iown-homecontrol™</a>'
 # site_dir: .cache/site # output folder: put in '.cache' to unclutter structure
 exclude_docs: | # Files to exclude from the built site.
   assets/images/patents
@@ -82,7 +82,7 @@ plugins:
       enabled: !ENV [GITHUB_ACTIONS, false]
 
 extra:
-  homepage: https://velocet.github.io/iown-homecontrol
+  homepage: https://github.com/mauicoder/situo5-esp32
   # consent:
   #   title: ''
   #   description: ''
@@ -99,9 +99,9 @@ extra:
     - icon: fontawesome/brands/telegram
       link: https://t.me/iownHomecontrol
     - icon: material/home
-      link: 'https://velocet.github.io/iown-homecontrol'
+      link: 'https://github.com/mauicoder/situo5-esp32'
     - icon: material/github
-      link: 'https://github.com/velocet/iown-homecontrol'
+      link: 'https://github.com/mauicoder/iown-homecontrol'
   status: # ☠❌❗❕❓❔
     beta: Document in beta status
     WIP: Document is unfinished

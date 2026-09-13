@@ -4,18 +4,18 @@
   "version": "0.6.9",
   "description": "io-homecontrol lib",
   "keywords": "io-homecontrol, somfy, velux, LoRa32, iown, iohome",
-  "homepage": "https://velocet.github.io/iown-homecontrol",
+  "homepage": "https://github.com/mauicoder/situo5-esp32",
   "license": "CC-BY-SA-4.0",
   "platforms": "espressif32",
   "repository": {
     "type": "git",
-    "url": "https://github.com/velocet/iown-homecontrol"
+    "url": "https://github.com/mauicoder/situo5-esp32"
   },
   "authors": [
     {
-      "name": "Velocet",
-      "email": "git@mail.velocet.de",
-      "url": "https://velocet.github.io/",
+      "name": "mauicoder",
+      "email": "mauicoder@users.noreply.github.com",
+      "url": "https://github.com/mauicoder",
       "maintainer": true
     }
   ],

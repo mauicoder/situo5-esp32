@@ -13,5 +13,5 @@ contact_links:
     url: https://discord.gg/MPEb7dTNdN
     about: Join the Discord Server!
   - name: Documentation
-    url: https://velocet.github.io/iown-homecontrol
+    url: https://github.com/mauicoder/situo5-esp32
     about: View the Documentation as a reference for your issue
