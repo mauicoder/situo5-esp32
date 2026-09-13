@@ -7,7 +7,7 @@
 </div>
 
 > [!NOTE]
-> You can also ask over at ([Telegram](https://t.me/iownHomecontrol)/[Discord](https://discord.gg/MPEb7dTNdN)) or open a [Discussion](https://github.com/Velocet/iown-homecontrol/discussions) if you have further questions.
+> You can also ask over at ([Telegram](https://t.me/iownHomecontrol)/[Discord](https://discord.gg/MPEb7dTNdN)) or open a [Discussion](https://github.com/mauicoder/situo5-esp32/discussions) if you have further questions.
 >
 > Oh.. and every contribution is welcome! ... even if it doesn't align with the rules described here! ;)
 
@@ -86,10 +86,10 @@
 ### Filing Issues
 
 If you spot a problem, [search if an issue already exists](https://docs.github.com/en/github/searching-for-information-on-github/searching-on-github/searching-issues-and-pull-requests#search-by-the-title-body-or-comments).
-If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/velocet/iown-homecontrol/issues/new/choose).
+If a related issue doesn't exist, you can open a new issue using a relevant [issue form](https://github.com/mauicoder/situo5-esp32/issues/new/choose).
 
 - **HowTo**: Solve an Issue
-  - Scan through the [existing issues](https://github.com/velocet/iown-homecontrol/issues) to find one that interests you.
+  - Scan through the [existing issues](https://github.com/mauicoder/situo5-esp32/issues) to find one that interests you.
     - You can narrow down the search using `labels` as filters.
   - If you find an issue to work on, you are welcome to open a PR with a fix.
 
@@ -222,4 +222,3 @@ All functions follow the same format: `iown_(function)_(action)_(set or get)_(pa
 - Follow code layout suggestions in [PEP8](https://www.python.org/dev/peps/pep-0008/) and Docstrings in [PEP257](https://www.python.org/dev/peps/pep-0257/).
 - Pylint is good tool for helping with following code guidelines. It's very fussy though, so don't get too worked up about following its suggestions.
 
-Python script boilerplate: [pyton_script_template.py](https://gist.githubusercontent.com/Velocet/51245270c2197023eaa9752c58fddc81/raw/3fd0e646872ac7b5f45a13150a5a3e2eb287c07f/pyton_script_template.py)

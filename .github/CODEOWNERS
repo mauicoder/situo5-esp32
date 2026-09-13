@@ -2,11 +2,11 @@
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # Default owner(s) for everything in the repo. Unless a later match takes precedence, owner(s) will be requested for review when a pull request is opened.
-# * @velocet
+# * @mauicoder
 
 # Control how changes are made to the workflow files
-/.github/ @Velocet
-/.vscode/ @Velocet
+/.github/ @mauicoder
+/.vscode/ @mauicoder
 
 # Free 4 All xD
 #/docs/
