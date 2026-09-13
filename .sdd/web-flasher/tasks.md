@@ -32,25 +32,25 @@ Extend the build script to compile the complete multi-board matrix across all `p
 
 ### Implementation steps
 
-- [ ] Update `scripts/build_web_flasher.py` to compile all 4 project environments: `heltec_wifi_lora_32_V3`, `heltec_wifi_lora_32_V3_debug`, `lilygo_t3_v16`, and `lilygo_t3_v16_debug`.
-- [ ] Support chip family detection and memory offset differentiation between `ESP32-S3` (bootloader at `0x0000`) and `ESP32` (LilyGo T3, bootloader at `0x1000`).
-- [ ] Enhance `docs/flasher.md` with responsive HTML/JS selector controls for Target Hardware (Heltec V3 vs. LilyGo T3) and Build Profile (Release vs. Debug).
-- [ ] Implement client-side JavaScript in `docs/flasher.md` that dynamically updates the `manifest` attribute on the `<esp-web-install-button>` upon dropdown selection.
-- [ ] Add Web Serial compatibility check (`'serial' in navigator`) that displays a prominent warning banner on unsupported browsers (Firefox, Safari, iOS).
+- [x] Update `scripts/build_web_flasher.py` to compile all 4 project environments: `heltec_wifi_lora_32_V3`, `heltec_wifi_lora_32_V3_debug`, `lilygo_t3_v16`, and `lilygo_t3_v16_debug`.
+- [x] Support chip family detection and memory offset differentiation between `ESP32-S3` (bootloader at `0x0000`) and `ESP32` (LilyGo T3, bootloader at `0x1000`).
+- [x] Enhance `docs/flasher.md` with responsive HTML/JS selector controls for Target Hardware (Heltec V3 vs. LilyGo T3) and Build Profile (Release vs. Debug).
+- [x] Implement client-side JavaScript in `docs/flasher.md` that dynamically updates the `manifest` attribute on the `<esp-web-install-button>` upon dropdown selection.
+- [x] Add Web Serial compatibility check (`'serial' in navigator`) that displays a prominent warning banner on unsupported browsers (Firefox, Safari, iOS).
 
 ### Acceptance criteria
 
-- [ ] Build script generates 4 separate manifest files and binary directories corresponding to each hardware environment.
-- [ ] LilyGo T3 (`ESP32`) manifest specifies chip family `ESP32` and bootloader offset `0x1000`.
-- [ ] Heltec V3 (`ESP32-S3`) manifest specifies chip family `ESP32-S3` and bootloader offset `0x0000`.
-- [ ] `docs/flasher.md` UI allows toggling between Heltec V3 and LilyGo T3, and between Release and Debug variants.
-- [ ] Toggling selection updates the `<esp-web-install-button manifest="...">` attribute to load the corresponding manifest URL.
-- [ ] Visiting the page on a browser lacking `navigator.serial` renders an error banner pointing users to Google Chrome or Microsoft Edge.
+- [x] Build script generates 4 separate manifest files and binary directories corresponding to each hardware environment.
+- [x] LilyGo T3 (`ESP32`) manifest specifies chip family `ESP32` and bootloader offset `0x1000`.
+- [x] Heltec V3 (`ESP32-S3`) manifest specifies chip family `ESP32-S3` and bootloader offset `0x0000`.
+- [x] `docs/flasher.md` UI allows toggling between Heltec V3 and LilyGo T3, and between Release and Debug variants.
+- [x] Toggling selection updates the `<esp-web-install-button manifest="...">` attribute to load the corresponding manifest URL.
+- [x] Visiting the page on a browser lacking `navigator.serial` renders an error banner pointing users to Google Chrome or Microsoft Edge.
 
 ### Quality gates
 
-- [ ] All 4 generated `manifest.json` files pass JSON syntax and ESP Web Tools schema structure validation.
-- [ ] `mkdocs build` succeeds with zero errors.
+- [x] All 4 generated `manifest.json` files pass JSON syntax and ESP Web Tools schema structure validation.
+- [x] `mkdocs build` succeeds with zero errors.
 
 ---
 
