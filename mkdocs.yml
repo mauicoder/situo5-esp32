@@ -13,7 +13,6 @@ exclude_docs: | # Files to exclude from the built site.
   assets/images/README.md
   assets/README.md
   datasheets
-  firmware
   parameter/database/JSON
   parameter/Internald
   parameter/IoHomecontrold
@@ -39,7 +38,7 @@ exclude_docs: | # Files to exclude from the built site.
   !lunr.stemmer.support.min.js
 # draft_docs: # Draft files are available during 'mkdocs serve' but not in 'mkdocs build'.
 nav:
-  # - Home: README.md
+  - Web Flasher: flasher.md
   - Protocol:
       - Layer 1: radio.md
       - Layer 2: linklayer.md
