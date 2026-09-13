@@ -65,7 +65,7 @@ jobs:
 
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Setup Cache
       uses: actions/cache@v6
       with:
