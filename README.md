@@ -1,4 +1,4 @@
-# iown-homecontrol (ESP32 Situo 5 Emulator)
+# situo5-esp32 (ESP32 Situo 5 Emulator)
 
 This project is an **ESP32-based emulator for the Somfy Situo 5 io-homecontrol remote**. It allows you to control your io-homecontrol compatible devices (like awnings, blinds, and roller shutters) directly from your local network, featuring built-in Web and MQTT interfaces for seamless integration into Smart Home systems like **Home Assistant**.
 
@@ -43,4 +43,4 @@ The project targets ESP32 boards equipped with a LoRa radio module capable of FS
    * In the web interface, you can assign friendly names to your discovered devices (e.g., "Left Awning").
    * These names are used when advertising the devices to your MQTT server.
    * Through MQTT Auto-Discovery, each awning will be announced to Home Assistant as a single, separated cover device with `open`, `close`, and `stop` commands available.
-   * All cloned devices will be logically connected and grouped under the main gateway parent device (`esp32-iown-homecontrol`).
+   * All cloned devices will be logically connected and grouped under the main gateway parent device (`esp32-situo5-esp32`).

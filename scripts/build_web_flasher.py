@@ -122,7 +122,7 @@ def package_environment(env_name, config, project_dir):
         parts.append({"path": bin_name, "offset": offset})
 
     manifest_data = {
-        "name": f"iown-homecontrol ({config['name']})",
+        "name": f"situo5-esp32 ({config['name']})",
         "version": "1.0.0",
         "builds": [
             {

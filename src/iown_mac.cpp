@@ -1,6 +1,6 @@
 /**
   * @file    iown_mac.cpp
-  * @author  iown-homecontrol
+  * @author  situo5-esp32
   * @brief   MAC header and NodeID
   *
   * #include <LibraryFile.h>

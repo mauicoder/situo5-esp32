@@ -1,6 +1,6 @@
 # Web Firmware Flasher
 
-Flash the iown-homecontrol firmware directly to your microcontroller from your web browser using Web Serial.
+Flash the situo5-esp32 firmware directly to your microcontroller from your web browser using Web Serial.
 
 <div id="unsupported-browser-banner" style="display: none; background-color: #ffebe9; border: 1px solid #ff8888; color: #cf222e; padding: 16px; border-radius: 6px; margin-bottom: 20px;">
   <strong>⚠️ Web Serial API Not Supported:</strong> Your current browser does not support Web Serial flashing. Please open this page in <strong>Google Chrome</strong>, <strong>Microsoft Edge</strong>, <strong>Brave</strong>, or <strong>Opera</strong> on desktop to flash your device.

@@ -1,6 +1,6 @@
 /**
   * @file    iown_defs.h
-  * @author  iown-homecontrol
+  * @author  situo5-esp32
   * @brief   Basic Definitions and Functions
   *
   * #include <LibraryFile.h>

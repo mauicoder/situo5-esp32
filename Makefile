@@ -7,7 +7,7 @@ CXX      = g++
 # Added -I for the mbedtls headers
 CXXFLAGS = -std=gnu++2a -Wall -Wextra -I src -I tests \
            -I$(MBED_PATH)/include \
-           -isystem /Users/maui/projects/iown-homecontrol/.pio/libdeps/heltec_wifi_lora_32_V2/RadioLib/src
+           -isystem /Users/maui/projects/bridge-projects/situo5-esp32/.pio/libdeps/heltec_wifi_lora_32_V2/RadioLib/src
 
 # Added -L for the mbedtls library files
 LDFLAGS  = -L$(MBED_PATH)/lib

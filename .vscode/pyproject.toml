@@ -1,6 +1,6 @@
 # SPDX-FileName: pyproject.toml
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-PackageName: iown-homecontrol
+# SPDX-PackageName: situo5-esp32
 # SPDX-PackageDownloadLocation: git+https://github.com/mauicoder/situo5-esp32
 # SPDX-FileComment: Build System Requirements for Python Projects (PEP 518)
 # SPDX-Comment: This file exists to counter a cache "bug" with
@@ -24,7 +24,7 @@ readme          = {file = "README.md", content-type = "text/markdown"}
 license         = {file = "LICENSE"}
 authors         = [{ name = "mauicoder", email = "mauicoder@users.noreply.github.com" }]
 maintainers     = [{ name = "mauicoder", email = "mauicoder@users.noreply.github.com" }]
-keywords        = ["iown-homecontrol","io-homecontrol","io homecontrol","iohomecontrol","velux","somfy","868MHz",]
+keywords        = ["situo5-esp32","io-homecontrol","io homecontrol","iohomecontrol","velux","somfy","868MHz",]
 requires-python = ">=3.12"
 dependencies    = ["importlib-metadata","requests","tomli","pydocstyle","pydocstyle[toml]",'python_version>"3.11"']
 # dynamic         = ["readme","version"] # When a field is dynamic, the build backend fills it. Consult your build backend to learn how.
@@ -46,7 +46,7 @@ Changelog       = "https://github.com/mauicoder/situo5-esp32/commits/main/"
 # namespaces = false        # Disable scanning PEP 420 namespaces
 # [tool.setuptools.dynamic]
 # readme = {file = "README.md", content-type = "text/markdown"}
-# version = {attr = "iown-homecontrol.VERSION"} # https://packaging.python.org/en/latest/guides/single-sourcing-package-version/
+# version = {attr = "situo5-esp32.VERSION"} # https://packaging.python.org/en/latest/guides/single-sourcing-package-version/
 
 [bdist_wheel]
 universal = 0  # Drop Python 2 support: Make generated wheels have "py3" tag
@@ -78,7 +78,7 @@ universal = 0  # Drop Python 2 support: Make generated wheels have "py3" tag
 # single-line-if-stmt = true
 # [tool.pylint.spelling]
 # max-spelling-suggestions = 2
-# spelling-ignore-words = "iown,iown-homecontrol,mauicoder"
+# spelling-ignore-words = "iown,situo5-esp32,mauicoder"
 # [tool.pylint.variables]
 # allow-global-unused-variables = true
 

@@ -1,6 +1,6 @@
 /**
   * @file    iown_frame.h
-  * @author  iown-homecontrol
+  * @author  situo5-esp32
   * @brief   Frame definitions and functions
   *
   * #include <LibraryFile.h>

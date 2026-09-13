@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
-  "name": "iown-homecontrol",
+  "name": "situo5-esp32",
   "version": "0.6.9",
   "description": "io-homecontrol lib",
   "keywords": "io-homecontrol, somfy, velux, LoRa32, iown, iohome",

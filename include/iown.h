@@ -1,7 +1,7 @@
 /**
   * @file    iown.h
-  * @author  iown-homecontrol
-  * @brief   Header for the iown-homecontrol lib
+  * @author  situo5-esp32
+  * @brief   Header for the situo5-esp32 lib
   *
   * #include <LibraryFile.h>
   * #include "LocalFile.h"

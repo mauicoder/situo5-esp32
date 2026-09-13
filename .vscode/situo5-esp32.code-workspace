@@ -1,4 +1,4 @@
-// SPDX-FileName: iown-homecontrol.code-workspace
+// SPDX-FileName: situo5-esp32.code-workspace
 // SPDX-FileComment: Virtual Workspace: code.visualstudio.com/api/extension-guides/virtual-workspaces
 //
 // NOTE: Using this workspace doesn't save locally!
@@ -6,7 +6,7 @@
 {
   "folders": [
     {
-      "name": "iown-homecontrol",
+      "name": "situo5-esp32",
       "uri": "vscode-vfs://github/mauicoder/situo5-esp32"
     }
   ],
