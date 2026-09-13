@@ -67,7 +67,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Setup Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         key:
           ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
