@@ -60,21 +60,21 @@ Automate the firmware build, release asset packaging, and GitHub Pages deploymen
 
 ### Implementation steps
 
-- [ ] Create `.github/workflows/release-firmware.yml` configured to trigger on git tag pushes (`refs/tags/v*`).
-- [ ] Configure CI environment to install Python, PlatformIO, and repository dependencies.
-- [ ] Run `scripts/build_web_flasher.py` during the workflow to produce all target binaries and `manifest.json` files.
-- [ ] Use `softprops/action-gh-release` (or `gh` CLI) to attach compiled firmware zip archives to the GitHub Release.
-- [ ] Integrate MkDocs deployment (`mkdocs gh-deploy --force`) into the workflow so the flasher web page, manifests, and binaries are published together to GitHub Pages.
+- [x] Create `.github/workflows/release-firmware.yml` configured to trigger on git tag pushes (`refs/tags/v*`).
+- [x] Configure CI environment to install Python, PlatformIO, and repository dependencies.
+- [x] Run `scripts/build_web_flasher.py` during the workflow to produce all target binaries and `manifest.json` files.
+- [x] Use `softprops/action-gh-release` (or `gh` CLI) to attach compiled firmware zip archives to the GitHub Release.
+- [x] Integrate MkDocs deployment (`mkdocs gh-deploy --force`) into the workflow so the flasher web page, manifests, and binaries are published together to GitHub Pages.
 
 ### Acceptance criteria
 
-- [ ] `.github/workflows/release-firmware.yml` triggers exclusively on release tags matching `v*`.
-- [ ] The workflow compiles all 4 board environments and builds the documentation site.
-- [ ] Compiled binaries are attached as downloadable assets to the GitHub Release.
-- [ ] The generated site on GitHub Pages serves `docs/flasher.md` along with all firmware binaries and manifest JSON files.
-- [ ] Standard commits to `main` without tags do NOT trigger the release firmware workflow.
+- [x] `.github/workflows/release-firmware.yml` triggers exclusively on release tags matching `v*`.
+- [x] The workflow compiles all 4 board environments and builds the documentation site.
+- [x] Compiled binaries are attached as downloadable assets to the GitHub Release.
+- [x] The generated site on GitHub Pages serves `docs/flasher.md` along with all firmware binaries and manifest JSON files.
+- [x] Standard commits to `main` without tags do NOT trigger the release firmware workflow.
 
 ### Quality gates
 
-- [ ] Workflow YAML file passes structural validation against GitHub Actions JSON schema.
-- [ ] Workflow permissions strictly adhere to principle of least privilege (`contents: write`, `pages: write`, `id-token: write`).
+- [x] Workflow YAML file passes structural validation against GitHub Actions JSON schema.
+- [x] Workflow permissions strictly adhere to principle of least privilege (`contents: write`, `pages: write`, `id-token: write`).
