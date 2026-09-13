@@ -40,7 +40,6 @@ jobs:
 
       - name: Build Firmware Matrix & Generate Web Flasher Manifests
         run: |
-          mkdir -p scripts/mkdocs/overrides
           python3 scripts/build_web_flasher.py
 
       - name: Create Release Firmware Zip Archive

@@ -118,7 +118,6 @@ extra_javascript:
 
 theme:
   name: material
-  custom_dir: scripts/mkdocs/overrides
   locale: en
   highlightjs: true
   # logo: assets/images/logo_filled.png
