@@ -20,7 +20,7 @@ jobs:
     name: Mark Issues and PRs as Stale
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/stale@v9
+      - uses: actions/stale@v11
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           days-before-stale: 69
