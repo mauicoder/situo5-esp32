@@ -80,6 +80,9 @@ plugins:
       type: timeago
   - privacy:
       enabled: !ENV [GITHUB_ACTIONS, false]
+      assets_exclude:
+        - unpkg.com/esp-web-tools*
+        - unpkg.com/esp-web-tools@*
 
 extra:
   homepage: https://github.com/mauicoder/situo5-esp32

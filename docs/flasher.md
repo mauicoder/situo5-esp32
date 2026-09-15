@@ -33,18 +33,29 @@ Flash the situo5-esp32 firmware directly to your microcontroller from your web b
 
     <div>
       <script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
-      <esp-web-install-button id="flasher-install-button" manifest="../firmware/heltec_wifi_lora_32_V3/manifest.json"></esp-web-install-button>
+      <esp-web-install-button id="flasher-install-button" manifest="../firmware/heltec_wifi_lora_32_V3/manifest.json">
+        <button slot="activate" class="md-button md-button--primary" style="font-size: 14px; font-weight: 600; padding: 10px 24px; border-radius: 9999px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+          <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+          Install Firmware
+        </button>
+        <span slot="unsupported">Your browser does not support Web Serial. Please use Google Chrome or Microsoft Edge.</span>
+        <span slot="not-allowed">Web Serial requires a secure HTTPS context.</span>
+      </esp-web-install-button>
     </div>
   </div>
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
+  function initFlasher() {
     var boardSelect = document.getElementById("board-select");
     var profileSelect = document.getElementById("profile-select");
     var installButton = document.getElementById("flasher-install-button");
     var manifestDisplay = document.getElementById("manifest-path-display");
     var warningBanner = document.getElementById("unsupported-browser-banner");
+
+    if (!boardSelect || !profileSelect || !installButton) {
+      return;
+    }
 
     if (!('serial' in navigator)) {
       if (warningBanner) {
@@ -63,22 +74,33 @@ Flash the situo5-esp32 firmware directly to your microcontroller from your web b
 
       var manifestUrl = "../firmware/" + env + "/manifest.json";
       installButton.setAttribute("manifest", manifestUrl);
+      installButton.manifest = manifestUrl;
       if (manifestDisplay) {
         manifestDisplay.textContent = manifestUrl;
       }
     }
 
-    if (boardSelect && profileSelect) {
-      boardSelect.addEventListener("change", updateManifest);
-      profileSelect.addEventListener("change", updateManifest);
-    }
-  });
+    boardSelect.removeEventListener("change", updateManifest);
+    profileSelect.removeEventListener("change", updateManifest);
+    boardSelect.addEventListener("change", updateManifest);
+    profileSelect.addEventListener("change", updateManifest);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initFlasher);
+  } else {
+    initFlasher();
+  }
+
+  if (typeof document$ !== "undefined") {
+    document$.subscribe(initFlasher);
+  }
 </script>
 
 ## Flashing Instructions
 
 1. Connect your board to your computer using a high-quality USB data cable.
 2. Select your hardware target and build profile using the dropdown menus above.
-3. Click the **Install** button.
+3. Click the **Install Firmware** button.
 4. In the browser popup window, select the USB serial port corresponding to your device and click **Connect**.
-5. Follow the on-screen prompts to complete installation.
+5. Once connected, the ESP Web Tools dialog will appear. Click **Install situo5-esp32** and follow the on-screen prompts to complete installation.
