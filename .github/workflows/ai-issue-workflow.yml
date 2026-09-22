@@ -1,0 +1,41 @@
+---
+name: Issue-Driven SDD Pipeline
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  sdd_cycle:
+    if: github.event.label.name == 'ai-task'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # Step 1: Analysis & Spec Generation (Heavy Reasoning Model)
+      - name: Draft Specification
+        uses: ai-actions/agent-runner@v1
+        with:
+          model: "gemini-3.5-pro" # High-reasoning model for architecture
+          prompt: "Analyze issue #${{ github.event.issue.number }}, inspect the codebase, and write a spec.md and plan.md to docs/specs/"
+
+      # Step 2: Pause for Human Sign-Off (The Gate)
+      - name: Wait for Architectural Approval
+        uses: ai-actions/gate-approval@v1
+        with:
+          comment-trigger: "approved" # Pauses until you comment 'approved' on the issue
+
+      # Step 3: Autonomous Implementation (Fast Coding Model)
+      - name: Execute Implementation Plan
+        uses: ai-actions/agent-runner@v1
+        with:
+          model: "gemini-3.5-flash" # Fast execution model for writing code
+          prompt: "Execute the tasks outlined in docs/specs/plan.md iteratively. Run tests when done."
+
+      # Step 4: Open Pull Request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "AI Implementation for Issue #${{ github.event.issue.number }}"
+          branch: "ai/issue-${{ github.event.issue.number }}"
+          
