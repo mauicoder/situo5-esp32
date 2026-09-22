@@ -57,8 +57,16 @@ jobs:
               f.write(context)
           '
 
-          # 2. Run Copilot CLI cleanly using the -p flag and file ingestion operator (@)
-          copilot -p "You are an expert embedded C++ software architect working on an ESP32 PlatformIO project. Read @issue_context.txt for requirements and user feedback. Inspect the source code under src/ and platformio.ini. Provide a structured implementation plan and any open points or clarifications needed. Do not write code yet." --allow-all-tools --allow-all-paths --yes --output-file copilot_spec.md
+          # 2. Run Copilot safely via piped heredoc to avoid command-line argument parsing errors
+          copilot --allow-all-tools --allow-all-paths --yes --output-file copilot_spec.md << 'EOF'
+          You are an expert embedded C++ software architect working on an ESP32 PlatformIO project. 
+          Read the file issue_context.txt for requirements and user feedback. Inspect the source code under src/ and platformio.ini.
+          
+          Provide:
+          1. A structured implementation plan.
+          2. Any Open Points / Clarifications needed before coding.
+          Do not write code yet.
+          EOF
 
       - name: Post Copilot Plan to Issue
         uses: actions/github-script@v7
