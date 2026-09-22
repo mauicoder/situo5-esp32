@@ -57,8 +57,8 @@ jobs:
               f.write(context)
           '
 
-          # 2. Run Copilot safely via piped heredoc to avoid command-line argument parsing errors
-          copilot --allow-all-tools --allow-all-paths --yes --output-file copilot_spec.md << 'EOF'
+          # 2. Run Copilot cleanly using standard prompt passing
+          copilot --output-file copilot_spec.md << 'EOF'
           You are an expert embedded C++ software architect working on an ESP32 PlatformIO project. 
           Read the file issue_context.txt for requirements and user feedback. Inspect the source code under src/ and platformio.ini.
           
