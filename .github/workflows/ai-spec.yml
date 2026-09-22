@@ -35,7 +35,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          # Fetch issue body and comments into context file
+          # Fetch issue body and comments into context file (with fixed python f-string handling)
           python3 -c '
           import os, json, urllib.request
           token = os.environ.get("GITHUB_TOKEN")
@@ -49,7 +49,9 @@ jobs:
 
           context = f"ISSUE DESCRIPTION:\n{body}\n\nDISCUSSION HISTORY:\n"
           for c in c_res:
-              context += f"[{c[\"user\"][\"login\"]}] : {c[\"body\"]}\n"
+              username = c["user"]["login"]
+              comment_body = c["body"]
+              context += f"[{username}] : {comment_body}\n"
 
           with open("issue_context.txt", "w") as f:
               f.write(context)
