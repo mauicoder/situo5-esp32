@@ -26,7 +26,6 @@ jobs:
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          # Clean up the comment: lowercase it, strip whitespace and punctuation
           CLEAN_COMMENT=$(echo "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]' | tr -d '[:punct:]' | xargs)
           echo "Processed comment: '$CLEAN_COMMENT'"
           
@@ -72,7 +71,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          # 1. Fetch issue and conversation history to create a structured PRD artifact
           python3 -c '
           import os, json, urllib.request
           token = os.environ.get("GITHUB_TOKEN")
@@ -86,33 +84,19 @@ jobs:
           
           c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
 
-          # Compile discussion history for context
           history = ""
           for c in c_res:
               username = c["user"]["login"]
               comment_body = c["body"]
               history += f"- **{username}**:\n{comment_body}\n\n"
 
-          # Write a clean, structured PRD & Task template file
           os.makedirs("docs/specs", exist_ok=True)
-          spec_content = f"""# PRD & Implementation Specification: Issue #{issue_number} - {title}
-
-## 1. Overview & Requirements
-{body}
-
-## 2. Clarification & Discussion Log
-{history}
-
-## 3. Implementation Task Breakdown
-- [ ] Task 1: Analyze existing source files under `src/` and dependencies in `platformio.ini`.
-- [ ] Task 2: Implement core logic modifications based on approved requirements.
-- [ ] Task 3: Verify build compilation cleanly using PlatformIO.
-"""
+          spec_content = f"# PRD & Implementation Specification: Issue #{issue_number} - {title}\n\n## 1. Overview & Requirements\n{body}\n\n## 2. Clarification & Discussion Log\n{history}\n\n## 3. Implementation Task Breakdown\n- [ ] Task 1: Analyze existing source files under src/ and dependencies in platformio.ini.\n- [ ] Task 2: Implement core logic modifications based on approved requirements.\n- [ ] Task 3: Verify build compilation cleanly using PlatformIO.\n"
+          
           with open("docs/specs/active-spec.md", "w") as f:
               f.write(spec_content)
           '
 
-          # 2. Instruct Copilot to read the structured spec artifact and execute the tasks
           copilot -p "Read docs/specs/active-spec.md. Follow the PRD and task breakdown precisely to implement the required changes in src/ or include/ for this ESP32 PlatformIO project."
 
       - name: Verify Build with PlatformIO
