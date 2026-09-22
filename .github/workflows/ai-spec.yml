@@ -21,12 +21,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Gather Issue & Discussion Context
+      - name: Install Node.js & Copilot CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Gather Discussion & Run Copilot Analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
+          # 1. Fetch issue body and comments into context file
           python3 -c '
           import os, json, urllib.request
           token = os.environ.get("GITHUB_TOKEN")
@@ -48,25 +57,20 @@ jobs:
               f.write(context)
           '
 
-      - name: Post Architectural Plan & Questions to Issue
+          # 2. Run Copilot non-interactively using the -p flag and standard redirection
+          copilot -p "You are an expert embedded C++ software architect working on an ESP32 PlatformIO project. Read issue_context.txt for requirements and user feedback. Inspect the source code under src/ and platformio.ini. Provide a structured implementation plan and any open points or clarifications needed. Do not write code yet." > copilot_spec.md
+
+      - name: Post Copilot Plan to Issue
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let contextData = fs.existsSync('issue_context.txt') ? fs.readFileSync('issue_context.txt', 'utf8') : "";
+            let planText = fs.existsSync('copilot_spec.md') ? fs.readFileSync('copilot_spec.md', 'utf8') : "Failed to generate plan.";
             
-            // Structured architectural summary based on the gathered context
-            const planText = "🤖 **AI Architect (Spec Phase)**:\n\n" +
-                             "I have analyzed your request and the conversation history. Here is the active plan:\n" +
-                             "1. Inspect source files under `src/` and `platformio.ini` for target compatibility.\n" +
-                             "2. Address feedback regarding the web flasher alternative.\n" +
-                             "3. Await final approval before generating code changes.\n\n" +
-                             "👉 **Please reply with any clarifications or type `approved` to trigger implementation.**";
-
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: planText
+              body: "🤖 **Copilot Architect (Spec Phase)**:\n\n" + planText + "\n\n👉 **Reply with `approved` when requirements are finalized.**"
             });
             
