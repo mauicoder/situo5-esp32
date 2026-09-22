@@ -1,0 +1,42 @@
+name: AI Phase 2 - Implementation & Build
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  execute_code:
+    # Only run if someone comments 'approved' and the issue actually has the 'ai-task' label
+    if: github.event.comment.body == 'approved' && contains(github.event.issue.labels.*.name, 'ai-task')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python & PlatformIO Core
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Compile ESP32 Firmware to Verify Build
+        run: pio run
+
+      - name: Post Success Confirmation
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 **AI Agent**: Approval received! Code executed and compiled successfully via PlatformIO.'
+            });
+            
