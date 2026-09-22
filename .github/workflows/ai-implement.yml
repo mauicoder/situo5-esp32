@@ -66,30 +66,54 @@ jobs:
       - name: Install PlatformIO
         run: pip install --upgrade platformio
 
-      - name: Save Spec Artifact & Execute Code Generation via Copilot
+      - name: Generate Structured PRD/Task Artifact & Execute Copilot
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          # 1. Fetch final comments to write active-spec.md
+          # 1. Fetch issue and conversation history to create a structured PRD artifact
           python3 -c '
           import os, json, urllib.request
           token = os.environ.get("GITHUB_TOKEN")
           repo = os.environ.get("REPOSITORY")
           issue_number = os.environ.get("ISSUE_NUMBER")
           headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-          c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
+
+          i_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}", headers=headers)).read().decode("utf-8"))
+          title = i_res.get("title", "")
+          body = i_res.get("body", "")
           
+          c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
+
+          # Compile discussion history for context
+          history = ""
+          for c in c_res:
+              username = c["user"]["login"]
+              comment_body = c["body"]
+              history += f"- **{username}**:\n{comment_body}\n\n"
+
+          # Write a clean, structured PRD & Task template file
           os.makedirs("docs/specs", exist_ok=True)
+          spec_content = f"""# PRD & Implementation Specification: Issue #{issue_number} - {title}
+
+## 1. Overview & Requirements
+{body}
+
+## 2. Clarification & Discussion Log
+{history}
+
+## 3. Implementation Task Breakdown
+- [ ] Task 1: Analyze existing source files under `src/` and dependencies in `platformio.ini`.
+- [ ] Task 2: Implement core logic modifications based on approved requirements.
+- [ ] Task 3: Verify build compilation cleanly using PlatformIO.
+"""
           with open("docs/specs/active-spec.md", "w") as f:
-              f.write("# Approved Specification & Task Plan\n\n")
-              for c in c_res:
-                  f.write(f"### {c[\"user\"][\"login\"]}\n{c[\"body\"]}\n\n---\n")
+              f.write(spec_content)
           '
 
-          # 2. Instruct Copilot to implement changes based on spec
-          copilot -p "Read docs/specs/active-spec.md and implement the requested changes in the src/ or include/ directory for this ESP32 PlatformIO project."
+          # 2. Instruct Copilot to read the structured spec artifact and execute the tasks
+          copilot -p "Read docs/specs/active-spec.md. Follow the PRD and task breakdown precisely to implement the required changes in src/ or include/ for this ESP32 PlatformIO project."
 
       - name: Verify Build with PlatformIO
         run: pio run
@@ -113,7 +137,7 @@ jobs:
               title: `AI Implementation for Issue #${issueNum}`,
               head: branchName,
               base: 'main',
-              body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO.`
+              body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO, complete with PRD and task artifacts.`
             });
 
             github.rest.issues.createComment({
