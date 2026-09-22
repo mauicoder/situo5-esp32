@@ -1,4 +1,4 @@
-name: AI Phase 1 - Spec & Iterative Discussion
+name: AI Phase 1 - Copilot Spec & Discussion
 
 on:
   issues:
@@ -7,71 +7,74 @@ on:
     types: [created]
 
 jobs:
-  analyze_and_spec:
-    # Only run if the issue has the 'ai-task' label and the comment isn't saying 'approved' yet
-    if: contains(github.event.issue.labels.*.name, 'ai-task') && (github.event_name == 'issues' || github.event.comment.body != 'approved')
+  copilot_spec_phase:
+    if: contains(github.event.issue.labels.*.name, 'ai-task') && (github.event_name == 'issues' || github.event.comment.body != 'approved') && github.actor == 'mauicoder'
     runs-on: ubuntu-latest
     permissions:
-      issues: write
       contents: read
+      issues: write
+      copilot-requests: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Set up Python & Requests
-        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          fetch-depth: 0
 
-      - name: Install Dependencies
-        run: pip install requests
+      - name: Install Node.js & Copilot CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
 
-      - name: Fetch Discussion & Generate Sketched Plan
+      - name: Gather Discussion & Run Copilot Analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
+          # Fetch issue body and comments into context file
           python3 -c '
-          import os, requests
-
+          import os, json, urllib.request
           token = os.environ.get("GITHUB_TOKEN")
           repo = os.environ.get("REPOSITORY")
           issue_number = os.environ.get("ISSUE_NUMBER")
-
           headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
 
-          # Fetch issue details
-          issue_res = requests.get(f"https://api.github.com/repos/{repo}/issues/{issue_number}", headers=headers).json()
-          issue_body = issue_res.get("body", "")
+          i_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}", headers=headers)).read().decode("utf-8"))
+          body = i_res.get("body", "")
+          c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
 
-          # Fetch all comments on the issue to capture user feedback
-          comments_res = requests.get(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers).json()
-          
-          discussion_history = f"Initial Issue Description:\n{issue_body}\n\nConversation/Feedback History:\n"
-          for c in comments_res:
-              user = c["user"]["login"]
-              body = c["body"]
-              discussion_history += f"- {user}: {body}\n"
+          context = f"ISSUE DESCRIPTION:\n{body}\n\nDISCUSSION HISTORY:\n"
+          for c in c_res:
+              context += f"[{c[\"user\"][\"login\"]}] : {c[\"body\"]}\n"
 
-          print("--- Collected Discussion Context ---")
-          print(discussion_history)
-
-          # Here is where your model/script processes the conversation history,
-          # respects your feedback (like checking the web flasher first),
-          # and drafts the updated sketched plan.
-          
-          sketched_plan = f"🤖 **AI Architect (Spec Phase)**:\n\n" \
-                          f"I have reviewed your latest feedback regarding Issue #{issue_number}.\n\n" \
-                          f"**Updated Sketched Plan:**\n" \
-                          f"1. Investigate the web flasher alternative first as requested.\n" \
-                          f"2. Analyze existing firmware code structures for compatibility.\n" \
-                          f"3. Refine technical approach before touching any code.\n\n" \
-                          f"👉 **Please provide further feedback or reply with `approved` when this plan is finalized.**"
-
-          # Post the updated plan back to the issue
-          comment_url = f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments"
-          requests.post(comment_url, headers=headers, json={"body": sketched_plan})
+          with open("issue_context.txt", "w") as f:
+              f.write(context)
           '
+
+          # Run Copilot non-interactively to generate spec and open questions
+          copilot --prompt "You are an expert embedded C++ software architect working on an ESP32 PlatformIO project. 
+          Read 'issue_context.txt' for requirements and user feedback. Inspect src/ and platformio.ini.
           
+          Provide:
+          1. A structured implementation plan.
+          2. Any Open Points / Clarifications needed before coding.
+          Do not write code yet." --allow-all-tools --allow-all-paths --yes --output-file copilot_spec.md
+
+      - name: Post Copilot Plan to Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let planText = fs.existsSync('copilot_spec.md') ? fs.readFileSync('copilot_spec.md', 'utf8') : "Failed to generate plan.";
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "🤖 **Copilot Architect (Spec Phase)**:\n\n" + planText + "\n\n👉 **Reply with `approved` when requirements are finalized.**"
+            });
+            
