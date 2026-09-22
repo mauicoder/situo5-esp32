@@ -1,0 +1,35 @@
+name: AI Phase 1 - Spec & Proposal
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  draft_spec:
+    if: github.event.label.name == 'ai-task'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Post Architectural Proposal
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const bodyMsg = '🤖 **AI Architect**: I have analyzed your request for the Situo5 ESP32 project. \n\n' +
+                            '**Proposed Plan:**\n' +
+                            '1. Modify code under `src/` to fulfill the requirements.\n' +
+                            '2. Verify compilation against the ESP32 target using PlatformIO.\n\n' +
+                            '👉 **Please reply with `approved` in a comment below to trigger implementation and code generation.**';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: bodyMsg
+            });
+            
