@@ -1,22 +1,40 @@
-name: AI Phase 2 - Implementation & Build
+name: AI Phase 2 - Implementation & PR
 
 on:
   issue_comment:
     types: [created]
 
 jobs:
-  execute_code:
-    # Only run if someone comments 'approved' and the issue actually has the 'ai-task' label
-    if: github.event.comment.body == 'approved' && contains(github.event.issue.labels.*.name, 'ai-task')
+  copilot_implement_phase:
+    if: github.event.comment.body == 'approved' && contains(github.event.issue.labels.*.name, 'ai-task') && github.actor == 'mauicoder'
     runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
       pull-requests: write
+      copilot-requests: write
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git Branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH_NAME="ai/issue-${{ github.event.issue.number }}"
+          git checkout -b "$BRANCH_NAME"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Install Node.js & Copilot CLI
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
 
       - name: Set up Python & PlatformIO Core
         uses: actions/setup-python@v5
@@ -26,17 +44,62 @@ jobs:
       - name: Install PlatformIO
         run: pip install --upgrade platformio
 
-      - name: Compile ESP32 Firmware to Verify Build
+      - name: Save Spec Artifact & Execute Code Generation via Copilot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # 1. Fetch final comments to write active-spec.md
+          python3 -c '
+          import os, json, urllib.request
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ.get("REPOSITORY")
+          issue_number = os.environ.get("ISSUE_NUMBER")
+          headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+          c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
+          
+          os.makedirs("docs/specs", exist_ok=True)
+          with open("docs/specs/active-spec.md", "w") as f:
+              f.write("# Approved Specification & Task Plan\n\n")
+              for c in c_res:
+                  f.write(f"### {c[\"user\"][\"login\"]}\n{c[\"body\"]}\n\n---\n")
+          '
+
+          # 2. Instruct Copilot to implement changes based on spec
+          copilot --prompt "Read docs/specs/active-spec.md and implement the requested changes in the src/ or include/ directory for this ESP32 PlatformIO project." --allow-all-tools --allow-all-paths --yes
+
+      - name: Verify Build with PlatformIO
         run: pio run
 
-      - name: Post Success Confirmation
+      - name: Commit Changes & Push Feature Branch
+        run: |
+          git add docs/specs/active-spec.md src/ include/
+          git commit -m "AI Agent implementation for Issue #${{ github.event.issue.number }}"
+          git push origin "$BRANCH_NAME"
+
+      - name: Open Pull Request
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const branchName = process.env.BRANCH_NAME;
+            const issueNum = context.issue.number;
+
+            // Create Pull Request
+            const pr = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🚀 **AI Agent**: Approval received! Code executed and compiled successfully via PlatformIO.'
+              title: `AI Implementation for Issue #${issueNum}`,
+              head: branchName,
+              base: 'main',
+              body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO.`
+            });
+
+            // Post link in issue
+            github.rest.issues.createComment({
+              issue_number: issueNum,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **AI Agent**: Implementation complete! Pull Request created successfully: ${pr.data.html_url}`
             });
             
