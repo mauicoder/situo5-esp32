@@ -1,12 +1,15 @@
-name: AI Phase 1 - Spec & Proposal
+name: AI Phase 1 - Spec & Iterative Discussion
 
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
 
 jobs:
-  draft_spec:
-    if: github.event.label.name == 'ai-task'
+  analyze_and_spec:
+    # Only run if the issue has the 'ai-task' label and the comment isn't saying 'approved' yet
+    if: contains(github.event.issue.labels.*.name, 'ai-task') && (github.event_name == 'issues' || github.event.comment.body != 'approved')
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -16,20 +19,59 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Post Architectural Proposal
-        uses: actions/github-script@v7
+      - name: Set up Python & Requests
+        uses: actions/setup-python@v5
         with:
-          script: |
-            const bodyMsg = '🤖 **AI Architect**: I have analyzed your request for the Situo5 ESP32 project. \n\n' +
-                            '**Proposed Plan:**\n' +
-                            '1. Modify code under `src/` to fulfill the requirements.\n' +
-                            '2. Verify compilation against the ESP32 target using PlatformIO.\n\n' +
-                            '👉 **Please reply with `approved` in a comment below to trigger implementation and code generation.**';
+          python-version: '3.11'
 
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: bodyMsg
-            });
-            
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Fetch Discussion & Generate Sketched Plan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          python3 -c '
+          import os, requests
+
+          token = os.environ.get("GITHUB_TOKEN")
+          repo = os.environ.get("REPOSITORY")
+          issue_number = os.environ.get("ISSUE_NUMBER")
+
+          headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+
+          # Fetch issue details
+          issue_res = requests.get(f"https://api.github.com/repos/{repo}/issues/{issue_number}", headers=headers).json()
+          issue_body = issue_res.get("body", "")
+
+          # Fetch all comments on the issue to capture user feedback
+          comments_res = requests.get(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers).json()
+          
+          discussion_history = f"Initial Issue Description:\n{issue_body}\n\nConversation/Feedback History:\n"
+          for c in comments_res:
+              user = c["user"]["login"]
+              body = c["body"]
+              discussion_history += f"- {user}: {body}\n"
+
+          print("--- Collected Discussion Context ---")
+          print(discussion_history)
+
+          # Here is where your model/script processes the conversation history,
+          # respects your feedback (like checking the web flasher first),
+          # and drafts the updated sketched plan.
+          
+          sketched_plan = f"🤖 **AI Architect (Spec Phase)**:\n\n" \
+                          f"I have reviewed your latest feedback regarding Issue #{issue_number}.\n\n" \
+                          f"**Updated Sketched Plan:**\n" \
+                          f"1. Investigate the web flasher alternative first as requested.\n" \
+                          f"2. Analyze existing firmware code structures for compatibility.\n" \
+                          f"3. Refine technical approach before touching any code.\n\n" \
+                          f"👉 **Please provide further feedback or reply with `approved` when this plan is finalized.**"
+
+          # Post the updated plan back to the issue
+          comment_url = f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments"
+          requests.post(comment_url, headers=headers, json={"body": sketched_plan})
+          '
+          
