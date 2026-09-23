@@ -1,13 +1,13 @@
 name: AI Phase 2 - Implementation & PR
 
 on:
-  issue_comment:
-    types: [created]
+  issues:
+    types: [labeled]
 
 jobs:
   copilot_implement_phase:
-    # Only run if the issue has the 'ai-task' label and the comment is made by you
-    if: contains(github.event.issue.labels.*.name, 'ai-task') && github.actor == 'mauicoder'
+    # Trigger ONLY when the 'approved' label is added to an issue that already has 'ai-task'
+    if: github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, 'ai-task') && github.actor == 'mauicoder'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -20,26 +20,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Check for Approval
-        id: check_approval
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          CLEAN_COMMENT=$(echo "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]' | tr -d '[:punct:]' | xargs)
-          echo "Processed comment: '$CLEAN_COMMENT'"
-          
-          if [ "$CLEAN_COMMENT" = "approved" ]; then
-            echo "is_approved=true" >> $GITHUB_OUTPUT
-            echo "Approval detected! Proceeding with implementation..."
-          else
-            echo "is_approved=false" >> $GITHUB_OUTPUT
-            echo "Comment is not an approval. Skipping implementation phase."
-          fi
-
-      - name: Stop if Not Approved
-        if: steps.check_approval.outputs.is_approved != 'true'
-        run: exit 0
 
       - name: Set up Git Branch
         run: |
