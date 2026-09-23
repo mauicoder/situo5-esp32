@@ -1,0 +1,585 @@
+name: AI - Implement Approved Plan
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  copilot-requests: write
+
+concurrency:
+  group: ai-implementation-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+
+  # ==============================================================
+  # SECURITY / AUTHORIZATION GATE
+  # ==============================================================
+
+  authorize:
+    name: Verify implementation approval
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/approve-plan' &&
+      contains(github.event.issue.labels.*.name, 'ai-awaiting-approval')
+
+    steps:
+
+      - name: Verify repository owner
+        env:
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Comment author: $COMMENT_AUTHOR"
+          echo "Repository owner: $REPOSITORY_OWNER"
+
+          if [ "$COMMENT_AUTHOR" != "$REPOSITORY_OWNER" ]; then
+            echo "ERROR: Only the repository owner can approve the plan."
+            exit 1
+          fi
+
+      - name: Approval accepted
+        run: |
+          echo "Implementation explicitly approved."
+
+  # ==============================================================
+  # IMPLEMENTATION
+  # ==============================================================
+
+  implement:
+    name: Implement approved plan
+    needs: authorize
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ------------------------------------------------------------
+      # Checkout default branch
+      # ------------------------------------------------------------
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------------------
+      # Setup Python / PlatformIO
+      # ------------------------------------------------------------
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      # ------------------------------------------------------------
+      # Install Copilot CLI
+      # ------------------------------------------------------------
+
+      - name: Install GitHub Copilot CLI
+        run: |
+          npm install -g @github/copilot
+
+      # ------------------------------------------------------------
+      # Prepare branch
+      # ------------------------------------------------------------
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Create AI branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+
+          git fetch origin
+
+          if git ls-remote --exit-code \
+              --heads origin "$BRANCH" >/dev/null 2>&1; then
+
+            echo "Branch already exists."
+
+            git checkout "$BRANCH"
+            git pull origin "$BRANCH"
+
+          else
+
+            git checkout -b "$BRANCH"
+
+          fi
+
+      # ------------------------------------------------------------
+      # Get issue + approved plan
+      # ------------------------------------------------------------
+
+      - name: Get issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p .ai
+
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --comments \
+            > .ai/issue.txt
+
+      - name: Verify approved plan exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! grep -q "AI Implementation Plan" .ai/issue.txt; then
+            echo "ERROR: No AI Implementation Plan found."
+            exit 1
+          fi
+
+      # ------------------------------------------------------------
+      # Create implementation prompt
+      # ------------------------------------------------------------
+
+      - name: Create implementation prompt
+        shell: bash
+        run: |
+          cat > .ai/prompt.txt <<'EOF'
+          You are the implementation agent for an ESP32 C++ project using
+          PlatformIO.
+
+          An implementation plan has been explicitly approved by the
+          repository owner.
+
+          You MUST implement the approved plan.
+
+          ================================================================
+          IMPORTANT RULES
+          ================================================================
+
+          The approved implementation plan is the specification.
+
+          Do NOT:
+
+          - invent new requirements
+          - modify unrelated functionality
+          - remove tests to make them pass
+          - weaken assertions
+          - bypass compiler errors
+          - bypass failing tests
+          - commit secrets
+          - commit credentials
+          - modify CI unless required by the approved plan
+          - merge the pull request
+
+          If the approved plan contains an ambiguity that prevents safe
+          implementation, stop and report it instead of guessing.
+
+          ================================================================
+          STEP 1 - UNDERSTAND
+          ================================================================
+
+          Read:
+
+          - issue
+          - all issue comments
+          - approved implementation plan
+          - repository instructions
+          - .github/copilot-instructions.md if present
+          - AGENTS.md if present
+
+          Then inspect:
+
+          - platformio.ini
+          - src/
+          - include/
+          - lib/
+          - test/
+          - .github/
+
+          ================================================================
+          STEP 2 - IMPLEMENT
+          ================================================================
+
+          Implement the approved plan.
+
+          Follow the existing architecture and coding style.
+
+          For ESP32 code pay particular attention to:
+
+          - memory usage
+          - dynamic allocation
+          - stack usage
+          - FreeRTOS concurrency
+          - watchdog behavior
+          - blocking operations
+          - timing
+          - GPIO/peripheral behavior
+          - flash/NVS wear
+          - WiFi/Bluetooth behavior where applicable
+
+          Make the smallest reasonable change.
+
+          ================================================================
+          STEP 3 - TEST
+          ================================================================
+
+          Inspect platformio.ini and identify relevant environments.
+
+          Run the appropriate builds.
+
+          At minimum attempt:
+
+              pio run
+
+          If named environments exist, run the relevant ones:
+
+              pio run -e <environment>
+
+          If tests exist:
+
+              pio test
+
+          Add or update tests where appropriate.
+
+          Never claim a test passed unless it actually ran.
+
+          ================================================================
+          STEP 4 - FIX
+          ================================================================
+
+          If build/tests fail:
+
+          1. Inspect the failure.
+          2. Determine whether it is caused by your changes.
+          3. Fix the implementation.
+          4. Run the test/build again.
+
+          Repeat until successful or until an external limitation prevents
+          further validation.
+
+          Never disable a test merely to make CI green.
+
+          ================================================================
+          STEP 5 - ACCEPTANCE CRITERIA
+          ================================================================
+
+          Verify EVERY acceptance criterion from the approved plan.
+
+          For each criterion determine:
+
+          PASS
+          FAIL
+          NOT TESTABLE AUTOMATICALLY
+
+          Hardware-dependent requirements must be explicitly identified.
+
+          ================================================================
+          STEP 6 - REVIEW YOUR CHANGES
+          ================================================================
+
+          Before finishing:
+
+          - inspect git diff
+          - inspect git status
+          - check for unrelated changes
+          - check for secrets
+          - check generated files
+          - check tests
+          - check formatting
+          - check that the implementation matches the plan
+
+          ================================================================
+          FINAL REPORT
+          ================================================================
+
+          Produce:
+
+          ## Implementation Summary
+
+          ...
+
+          ## Files Changed
+
+          ...
+
+          ## Tests Executed
+
+          ...
+
+          ## Acceptance Criteria
+
+          - [x] ...
+          - [x] ...
+
+          ## Hardware Validation
+
+          ...
+
+          ## Limitations
+
+          ...
+
+          IMPORTANT:
+
+          The GitHub Actions workflow will create the commit and PR.
+
+          You should modify the working tree but do not attempt to merge
+          anything.
+          EOF
+
+      # ------------------------------------------------------------
+      # Run Copilot implementation
+      # ------------------------------------------------------------
+
+      - name: Run AI implementation
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          copilot \
+            --prompt "$(cat .ai/prompt.txt)" \
+            --allow-tool 'shell' \
+            --allow-tool 'write' \
+            --allow-tool 'read'
+
+      # ------------------------------------------------------------
+      # Show changes
+      # ------------------------------------------------------------
+
+      - name: Show changes
+        run: |
+          git status --short
+          git diff --stat
+          git diff
+
+      # ------------------------------------------------------------
+      # PlatformIO validation
+      # ------------------------------------------------------------
+
+      - name: PlatformIO build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Running PlatformIO build..."
+
+          pio run
+
+      - name: PlatformIO tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -d "test" ] && find test -type f | grep -q .; then
+            echo "Running PlatformIO tests..."
+            pio test
+          else
+            echo "No PlatformIO tests found."
+          fi
+
+      # ------------------------------------------------------------
+      # Final AI verification
+      # ------------------------------------------------------------
+
+      - name: Verify implementation against requirements
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > .ai/verification.txt <<'EOF'
+          Review the implementation currently present in the working tree.
+
+          Compare it against the approved implementation plan and issue.
+
+          Verify:
+
+          1. Every requirement is implemented.
+          2. Every acceptance criterion is satisfied.
+          3. Appropriate tests exist.
+          4. No unrelated functionality was changed.
+          5. The implementation follows the existing architecture.
+          6. PlatformIO build/test results are consistent with the claimed
+             behavior.
+
+          Do not modify files.
+
+          Return exactly:
+
+          ## Verification
+
+          ### Requirements
+
+          - PASS/FAIL - ...
+
+          ### Acceptance Criteria
+
+          - PASS/FAIL - ...
+
+          ### Tests
+
+          ...
+
+          ### Problems
+
+          ...
+
+          ### Overall
+
+          PASS
+
+          or
+
+          FAIL
+          EOF
+
+          copilot \
+            --prompt "$(cat .ai/verification.txt)" \
+            --allow-tool 'shell' \
+            --allow-tool 'read' \
+            > .ai/verification-result.txt
+
+          cat .ai/verification-result.txt
+
+          if grep -qE '^FAIL$' .ai/verification-result.txt; then
+            echo "AI verification failed."
+            exit 1
+          fi
+
+      # ------------------------------------------------------------
+      # Commit
+      # ------------------------------------------------------------
+
+      - name: Commit changes
+        shell: bash
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          # Do not commit AI temporary files.
+          rm -rf .ai
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes detected."
+            exit 1
+          fi
+
+          git add -A
+
+          git commit \
+            -m "AI: implement issue #${ISSUE_NUMBER}"
+
+      # ------------------------------------------------------------
+      # Push branch
+      # ------------------------------------------------------------
+
+      - name: Push branch
+        run: |
+          git push \
+            --set-upstream origin "$BRANCH"
+
+      # ------------------------------------------------------------
+      # Create PR
+      # ------------------------------------------------------------
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ISSUE_TITLE=$(gh issue view "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --json title \
+            --jq '.title')
+
+          cat > .ai-pr-body.md <<EOF
+          ## Summary
+
+          Closes #${ISSUE_NUMBER}
+
+          AI implementation based on the explicitly approved implementation
+          plan.
+
+          ## Validation
+
+          PlatformIO build:
+
+          \`pio run\`
+
+          PlatformIO tests:
+
+          \`pio test\`
+
+          ## Review
+
+          Please review:
+
+          - implementation
+          - tests
+          - acceptance criteria
+          - hardware-dependent behavior
+
+          The PR has NOT been merged automatically.
+          EOF
+
+          PR_URL=$(gh pr create \
+            --repo "$REPOSITORY" \
+            --head "$BRANCH" \
+            --base "$(gh repo view "$REPOSITORY" \
+              --json defaultBranchRef \
+              --jq '.defaultBranchRef.name')" \
+            --title "AI: Implement #${ISSUE_NUMBER} - ${ISSUE_TITLE}" \
+            --body-file .ai-pr-body.md)
+
+          echo "Created PR:"
+          echo "$PR_URL"
+
+      # ------------------------------------------------------------
+      # Update issue
+      # ------------------------------------------------------------
+
+      - name: Update issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-pr" \
+            --remove-label "ai-awaiting-approval"
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "AI implementation completed and a pull request was created. Please review the PR before merging."
