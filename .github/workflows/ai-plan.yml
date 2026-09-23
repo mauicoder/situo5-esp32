@@ -17,12 +17,6 @@ permissions:
 
 jobs:
   analyze:
-    # Run when:
-    # 1. An issue gets the ai-task label
-    # 2. An ai-task issue is reopened
-    # 3. Someone comments /replan or /analyze on an ai-task issue
-    #
-    # Never run on pull requests.
     if: >
       github.event.issue.pull_request == null &&
       (
@@ -98,15 +92,8 @@ jobs:
 
       - name: Analyze issue
         env:
-          # GitHub CLI authentication.
-          # GitHub documents that every step using `gh` must provide GH_TOKEN.
           GH_TOKEN: ${{ github.token }}
-
-          # Copilot CLI authentication.
-          # COPILOT_GITHUB_TOKEN takes precedence, but the built-in
-          # GITHUB_TOKEN is also supported by current Copilot CLI.
           COPILOT_GITHUB_TOKEN: ${{ github.token }}
-
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
@@ -146,9 +133,11 @@ jobs:
              sufficiently clear.
 
           Repository context:
+
           - This is a C++ ESP32 project using PlatformIO.
           - platformio.ini is authoritative for the build environments.
-          - Inspect the existing source tree and tests before proposing changes.
+          - Inspect the existing source tree and tests before proposing
+            changes.
           - Follow existing project conventions.
           - Do not invent requirements that are not supported by the issue
             or repository.
@@ -231,6 +220,46 @@ jobs:
 
           echo "===== Copilot output ====="
           cat .ai/plan.txt
+
+      - name: Ensure workflow labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Ensuring AI workflow labels exist..."
+
+          gh label create "ai-task" \
+            --repo "$REPOSITORY" \
+            --color "1D76DB" \
+            --description "Issue selected for AI analysis" \
+            --force
+
+          gh label create "ai-clarifying" \
+            --repo "$REPOSITORY" \
+            --color "FBCA04" \
+            --description "AI needs clarification before planning" \
+            --force
+
+          gh label create "ai-awaiting-approval" \
+            --repo "$REPOSITORY" \
+            --color "B60205" \
+            --description "AI plan is waiting for human approval" \
+            --force
+
+          gh label create "ai-pr" \
+            --repo "$REPOSITORY" \
+            --color "0E8A16" \
+            --description "AI implementation pull request created" \
+            --force
+
+          gh label create "ai-failed" \
+            --repo "$REPOSITORY" \
+            --color "D93F0B" \
+            --description "AI workflow failed" \
+            --force
 
       - name: Publish clarification request
         if: success()
