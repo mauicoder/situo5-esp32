@@ -571,7 +571,179 @@ jobs:
             --add-label "ai-awaiting-plan-approval" \
             --remove-label "ai-awaiting-spec-approval"
 
+  # ============================================================
+  # PLAN REVISION
+  #
+  # Trigger:
+  #   /revise-plan
+  #
+  # Regenerates plan.md while keeping the issue in:
+  #   ai-awaiting-plan-approval
+  # ============================================================
 
+  revise_plan:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event_name == 'issue_comment' &&
+      github.event.comment.body == '/revise-plan' &&
+      contains(github.event.issue.labels.*.name, 'ai-awaiting-plan-approval') &&
+      github.event.comment.user.login == github.repository_owner
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Copilot CLI
+        run: |
+          npm install -g @github/copilot
+
+      - name: Fetch issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .ai
+
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --comments \
+            > .ai/issue.txt
+
+      - name: Fetch SDD branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git fetch origin "$BRANCH:$BRANCH"
+          git checkout "$BRANCH"
+
+      - name: Regenerate technical plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ".ai/sdd/issue-${ISSUE_NUMBER}"
+
+          cat > .ai/plan-revision-prompt.txt <<'EOF'
+          You are revising an existing technical plan in a
+          Spec-Driven Development workflow.
+
+          DO NOT IMPLEMENT APPLICATION CODE.
+
+          Read:
+          - .ai/sdd/issue-*/spec.md
+          - .ai/sdd/issue-*/plan.md
+          - .ai/issue.txt
+          - platformio.ini
+          - existing source
+          - existing tests
+          - existing documentation
+
+          The latest human issue comments may contain requested changes
+          to the plan. Incorporate those requests carefully.
+
+          Preserve valid existing design decisions unless the human
+          feedback requires changing them.
+
+          In particular, remove the Python desktop CLI from this
+          implementation if requested by the human. The browser/Web
+          Serial workflow remains in scope. The serial protocol and
+          configuration schema may remain reusable for a future CLI.
+
+          Rewrite:
+          .ai/sdd/issue-*/plan.md
+
+          Keep the complete technical-plan structure, requirement
+          traceability, testing strategy, hardware validation strategy,
+          implementation risks, and explicit non-goals.
+
+          Every FR-* and AC-* from the approved specification must still
+          appear in the traceability table.
+
+          End with:
+          PLAN READY FOR REVIEW
+          EOF
+
+          copilot \
+            -p "$(cat .ai/plan-revision-prompt.txt)" \
+            -s \
+            --no-ask-user \
+            --allow-tool='shell' \
+            --allow-tool='read' \
+            --allow-tool=write
+
+          echo "===== REVISED PLAN ====="
+          cat ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+      - name: Validate revised plan
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          PLAN=".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+          if grep -q '^PLAN CLARIFICATION REQUIRED' "$PLAN"; then
+            echo "Plan requires clarification."
+            exit 1
+          fi
+
+          if ! grep -q '^PLAN READY FOR REVIEW' "$PLAN"; then
+            echo "Plan did not reach READY state."
+            exit 1
+          fi
+
+      - name: Commit revised plan
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+          if git diff --cached --quiet; then
+            echo "No plan changes to commit."
+          else
+            git commit \
+              -m "AI SDD: revise technical plan for issue #${ISSUE_NUMBER}"
+          fi
+
+          git push --set-upstream origin "$BRANCH"
+
+      - name: Publish revised plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+      - name: Clean temporary files
+        if: always()
+        run: |
+          rm -rf .ai
+          
   # ============================================================
   # TASKS
   #
