@@ -531,7 +531,7 @@ jobs:
             echo "Plan did not reach READY state."
             exit 1
           fi
-
+          
       - name: Commit plan
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -539,6 +539,9 @@ jobs:
           set -euo pipefail
 
           BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
 
