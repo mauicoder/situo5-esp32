@@ -5,8 +5,7 @@ on:
     types: [labeled]
 
 jobs:
-  copilot_implement_phase:
-    # Trigger ONLY when the 'approved' label is added to an issue that already has 'ai-task'
+  implement_phase:
     if: github.event.label.name == 'approved' && contains(github.event.issue.labels.*.name, 'ai-task') && github.actor == 'mauicoder'
     runs-on: ubuntu-latest
     permissions:
@@ -26,10 +25,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BRANCH_NAME="ai/issue-${{ github.event.issue.number }}"
-          
           git fetch origin || true
-          
-          # If remote branch exists, check it out; otherwise create a new one
           if git ls-remote --exit-code --heads origin "$BRANCH_NAME"; then
             git checkout "$BRANCH_NAME"
             git pull origin "$BRANCH_NAME" || true
@@ -38,11 +34,34 @@ jobs:
           fi
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
+      - name: Generate Clean Spec Artifact via GitHub API
+        uses: actions/github-script@v7
+        with:
+          script: async () => {
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+
+            const issue = await github.rest.issues.get({ owner, repo, issue_number });
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+
+            let history = "";
+            for (const c of comments.data) {
+              history += `- **${c.user.login}**: ${c.body}\n`;
+            }
+
+            const spec = `# Approved Specification: Issue #${issue_number} - ${issue.data.title}\n\n## 1. Requirements\n${issue.data.body}\n\n## 2. Discussion & Context\n${history}\n\n## 3. Tasks\n- [ ] Implement changes in src/\n- [ ] Verify build with PlatformIO\n`;
+            
+            fs.mkdirSync('docs/specs', { recursive: true });
+            fs.writeFileSync('docs/specs/active-spec.md', spec);
+          }
+
       - name: Install Node.js & Copilot CLI
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          
+      
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
 
@@ -50,61 +69,33 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - run: pip install --upgrade platformio
 
-      - name: Install PlatformIO
-        run: pip install --upgrade platformio
-
-      - name: Generate Structured PRD/Task Artifact & Execute Copilot
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          python3 -c '
-          import os, json, urllib.request
-          token = os.environ.get("GITHUB_TOKEN")
-          repo = os.environ.get("REPOSITORY")
-          issue_number = os.environ.get("ISSUE_NUMBER")
-          headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-
-          i_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}", headers=headers)).read().decode("utf-8"))
-          title = i_res.get("title", "")
-          body = i_res.get("body", "")
-          
-          c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
-
-          history = ""
-          for c in c_res:
-              username = c["user"]["login"]
-              comment_body = c["body"]
-              history += f"- **{username}**:\n{comment_body}\n\n"
-
-          os.makedirs("docs/specs", exist_ok=True)
-          spec_content = f"# PRD & Implementation Specification: Issue #{issue_number} - {title}\n\n## 1. Overview & Requirements\n{body}\n\n## 2. Clarification & Discussion Log\n{history}\n\n## 3. Implementation Task Breakdown\n- [ ] Task 1: Analyze existing source files under src/ and dependencies in platformio.ini.\n- [ ] Task 2: Implement core logic modifications based on approved requirements.\n- [ ] Task 3: Verify build compilation cleanly using PlatformIO.\n"
-          
-          with open("docs/specs/active-spec.md", "w") as f:
-              f.write(spec_content)
-          '
-
-          copilot -p "Read docs/specs/active-spec.md. Follow the PRD and task breakdown precisely to implement the required changes in src/ or include/ for this ESP32 PlatformIO project."
+      - name: Run Copilot Implementation
+        run: copilot -p "Read docs/specs/active-spec.md. Implement the required changes in src/ or include/ for this ESP32 project."
 
       - name: Verify Build with PlatformIO
         run: pio run
 
-      - name: Commit Changes & Push Feature Branch
-        run: |
-          git add docs/specs/active-spec.md src/ include/
-          git commit -m "AI Agent implementation for Issue #${{ github.event.issue.number }}" || echo "No changes to commit"
-          git push origin "$BRANCH_NAME" --force-with-lease
-
-      - name: Open Pull Request
+      - name: Commit, Push & Open PR
         uses: actions/github-script@v7
         with:
-          script: |
+          script: async () => {
+            const exec = require('child_process').execSync;
             const branchName = process.env.BRANCH_NAME;
             const issueNum = context.issue.number;
 
-            // Check if PR already exists for this branch to avoid duplicate errors
+            exec('git add docs/specs/active-spec.md src/ include/');
+            
+            const status = exec('git status --porcelain').toString();
+            if (!status) {
+              console.log("No changes to commit.");
+              return;
+            }
+
+            exec(`git commit -m "AI Agent implementation for Issue #${issueNum}"`);
+            exec(`git push origin "${branchName}" --force-with-lease`);
+
             const existingPrs = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -122,44 +113,16 @@ jobs:
                 title: `AI Implementation for Issue #${issueNum}`,
                 head: branchName,
                 base: 'main',
-                body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO, complete with PRD and task artifacts.`
+                body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO.`
               });
               prUrl = pr.data.html_url;
             }
 
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: issueNum,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `🚀 **AI Agent**: Implementation complete! Pull Request ready: ${prUrl}`
             });
-            
-      - name: Commit Changes & Push Feature Branch
-        run: |
-          git add docs/specs/active-spec.md src/ include/
-          git commit -m "AI Agent implementation for Issue #${{ github.event.issue.number }}"
-          git push origin "$BRANCH_NAME"
-
-      - name: Open Pull Request
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const branchName = process.env.BRANCH_NAME;
-            const issueNum = context.issue.number;
-
-            const pr = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `AI Implementation for Issue #${issueNum}`,
-              head: branchName,
-              base: 'main',
-              body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO, complete with PRD and task artifacts.`
-            });
-
-            github.rest.issues.createComment({
-              issue_number: issueNum,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🚀 **AI Agent**: Implementation complete! Pull Request created successfully: ${pr.data.html_url}`
-            });
-            
+          }
+          
