@@ -26,7 +26,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BRANCH_NAME="ai/issue-${{ github.event.issue.number }}"
-          git checkout -b "$BRANCH_NAME"
+          
+          git fetch origin || true
+          
+          # If remote branch exists, check it out; otherwise create a new one
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME"; then
+            git checkout "$BRANCH_NAME"
+            git pull origin "$BRANCH_NAME" || true
+          else
+            git checkout -b "$BRANCH_NAME"
+          fi
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Install Node.js & Copilot CLI
@@ -82,6 +91,49 @@ jobs:
       - name: Verify Build with PlatformIO
         run: pio run
 
+      - name: Commit Changes & Push Feature Branch
+        run: |
+          git add docs/specs/active-spec.md src/ include/
+          git commit -m "AI Agent implementation for Issue #${{ github.event.issue.number }}" || echo "No changes to commit"
+          git push origin "$BRANCH_NAME" --force-with-lease
+
+      - name: Open Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branchName = process.env.BRANCH_NAME;
+            const issueNum = context.issue.number;
+
+            // Check if PR already exists for this branch to avoid duplicate errors
+            const existingPrs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branchName}`,
+              state: 'open'
+            });
+
+            let prUrl = "";
+            if (existingPrs.data.length > 0) {
+              prUrl = existingPrs.data[0].html_url;
+            } else {
+              const pr = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `AI Implementation for Issue #${issueNum}`,
+                head: branchName,
+                base: 'main',
+                body: `Closes #${issueNum}\n\nAutomated implementation generated via GitHub Copilot CLI and verified with PlatformIO, complete with PRD and task artifacts.`
+              });
+              prUrl = pr.data.html_url;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: issueNum,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🚀 **AI Agent**: Implementation complete! Pull Request ready: ${prUrl}`
+            });
+            
       - name: Commit Changes & Push Feature Branch
         run: |
           git add docs/specs/active-spec.md src/ include/
