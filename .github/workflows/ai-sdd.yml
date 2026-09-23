@@ -538,13 +538,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
           git add ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
 
-          git commit \
-            -m "AI SDD: add technical plan for issue #${ISSUE_NUMBER}" \
-            || true
+          if git diff --cached --quiet; then
+            echo "No plan changes to commit."
+          else
+            git commit \
+              -m "AI SDD: add technical plan for issue #${ISSUE_NUMBER}"
+          fi
 
-          git push
+          git push --set-upstream origin "$BRANCH"
 
       - name: Publish plan
         env:
