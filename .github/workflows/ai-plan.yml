@@ -17,10 +17,12 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze issue and create implementation plan
-    runs-on: ubuntu-latest
-
-    # Only process issues, never PR comments.
+    # Run when:
+    # 1. An issue gets the ai-task label
+    # 2. An ai-task issue is reopened
+    # 3. Someone comments /replan or /analyze on an ai-task issue
+    #
+    # Never run on pull requests.
     if: >
       github.event.issue.pull_request == null &&
       (
@@ -38,27 +40,21 @@ jobs:
         ||
         (
           github.event_name == 'issue_comment' &&
+          contains(github.event.issue.labels.*.name, 'ai-task') &&
           (
             github.event.comment.body == '/replan' ||
             github.event.comment.body == '/analyze'
-          ) &&
-          contains(github.event.issue.labels.*.name, 'ai-task')
+          )
         )
       )
 
-    steps:
-      # ------------------------------------------------------------
-      # Checkout repository
-      # ------------------------------------------------------------
+    runs-on: ubuntu-latest
 
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # ------------------------------------------------------------
-      # Install PlatformIO
-      # ------------------------------------------------------------
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,60 +66,54 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
-      # ------------------------------------------------------------
-      # Collect repository information
-      # ------------------------------------------------------------
-
       - name: Collect repository information
         shell: bash
         run: |
+          set -euo pipefail
+
           mkdir -p .ai
 
-          echo "===== platformio.ini =====" > .ai/repository-info.txt
+          echo "===== platformio.ini =====" > .ai/repository.txt
 
           if [ -f platformio.ini ]; then
-            cat platformio.ini >> .ai/repository-info.txt
+            cat platformio.ini >> .ai/repository.txt
           else
-            echo "platformio.ini not found" >> .ai/repository-info.txt
+            echo "WARNING: platformio.ini not found" >> .ai/repository.txt
           fi
 
-          echo "" >> .ai/repository-info.txt
-          echo "===== Repository structure =====" >> .ai/repository-info.txt
+          echo "" >> .ai/repository.txt
+          echo "===== Repository files =====" >> .ai/repository.txt
 
           find . \
-            -path './.git' -prune -o \
-            -path './.pio' -prune -o \
-            -path './.ai' -prune -o \
-            -type f -print \
+            -type f \
+            -not -path './.git/*' \
+            -not -path './.ai/*' \
             | sort \
-            | head -1000 \
-            >> .ai/repository-info.txt
-
-          echo "" >> .ai/repository-info.txt
-          echo "===== PlatformIO environments =====" >> .ai/repository-info.txt
-
-          if [ -f platformio.ini ]; then
-            pio project config --json-output \
-              >> .ai/repository-info.txt 2>&1 || true
-          fi
-
-      # ------------------------------------------------------------
-      # Run Copilot
-      # ------------------------------------------------------------
+            | head -500 \
+            >> .ai/repository.txt
 
       - name: Install GitHub Copilot CLI
-        shell: bash
         run: |
           npm install -g @github/copilot
 
       - name: Analyze issue
         env:
-          GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          # GitHub CLI authentication.
+          # GitHub documents that every step using `gh` must provide GH_TOKEN.
+          GH_TOKEN: ${{ github.token }}
+
+          # Copilot CLI authentication.
+          # COPILOT_GITHUB_TOKEN takes precedence, but the built-in
+          # GITHUB_TOKEN is also supported by current Copilot CLI.
+          COPILOT_GITHUB_TOKEN: ${{ github.token }}
+
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPOSITORY: ${{ github.repository }}
         shell: bash
         run: |
           set -euo pipefail
+
+          echo "Fetching issue #$ISSUE_NUMBER..."
 
           gh issue view "$ISSUE_NUMBER" \
             --repo "$REPOSITORY" \
@@ -131,205 +121,119 @@ jobs:
             > .ai/issue.txt
 
           cat > .ai/prompt.txt <<'EOF'
-          You are the requirements and architecture analysis agent for an
-          ESP32 C++ firmware project using PlatformIO.
+          You are the planning phase of an AI software-development workflow.
 
           IMPORTANT:
+          You are NOT implementing the issue.
 
-          This is ONLY the analysis/planning phase.
-
-          DO NOT:
-          - modify source code
+          Do NOT:
+          - modify source files
           - create a branch
           - commit anything
           - push anything
           - create a pull request
-          - implement the requested feature
+          - merge anything
 
-          Your job is to understand the issue and prepare the implementation
-          plan for human approval.
+          Your job is to inspect the GitHub issue and repository and produce
+          either:
 
-          ================================================================
-          REPOSITORY
-          ================================================================
+          1. A concise clarification request if important information is
+             missing or ambiguous.
 
-          First inspect the repository thoroughly.
+          OR
 
-          Pay particular attention to:
+          2. A detailed implementation plan if the requirements are
+             sufficiently clear.
 
-          - platformio.ini
-          - src/
-          - include/
-          - lib/
-          - test/
-          - boards/
-          - .github/
-          - documentation
-          - existing CI workflows
+          Repository context:
+          - This is a C++ ESP32 project using PlatformIO.
+          - platformio.ini is authoritative for the build environments.
+          - Inspect the existing source tree and tests before proposing changes.
+          - Follow existing project conventions.
+          - Do not invent requirements that are not supported by the issue
+            or repository.
 
-          Determine:
+          If clarification is required, begin your response EXACTLY with:
 
-          - ESP32 board
-          - PlatformIO environments
-          - framework
-          - C++ standard
-          - libraries
-          - architecture
-          - testing strategy
-          - relevant classes/modules
-          - existing coding conventions
+          AI Clarification Required
 
-          Do not assume the issue description accurately describes the
-          implementation.
+          Then list the questions that the human must answer.
 
-          ================================================================
-          ISSUE
-          ================================================================
+          If the issue is sufficiently clear, begin your response EXACTLY with:
 
-          Read:
+          AI Implementation Plan
 
-          .ai/issue.txt
+          Then provide:
 
-          ================================================================
-          ANALYSIS
-          ================================================================
+          ## Understanding of the requirement
 
-          Determine:
-
-          1. What exactly is being requested?
-          2. Which existing code is affected?
-          3. What requirements are explicit?
-          4. What requirements are implied?
-          5. What acceptance criteria can be derived?
-          6. What technical questions remain unanswered?
-          7. What tests are required?
-          8. Which tests can run in GitHub Actions?
-          9. Which tests require physical ESP32 hardware?
-
-          ================================================================
-          CLARIFICATION RULE
-          ================================================================
-
-          If there is any important ambiguity that could result in multiple
-          reasonable implementations, ask a clarification question.
-
-          Do NOT make important product decisions yourself.
-
-          Examples:
-
-          - unclear API behavior
-          - unclear timing
-          - unclear error handling
-          - unclear hardware behavior
-          - unclear backwards compatibility
-          - unclear persistence behavior
-          - unclear user-visible behavior
-
-          If clarification is needed, output EXACTLY this structure:
-
-          ## AI Clarification Required
-
-          ### Questions
-
-          1. ...
-          2. ...
-          3. ...
-
-          ### Why these questions matter
-
-          ...
-
-          Do not produce an implementation plan until the questions are
-          answered.
-
-          ================================================================
-          PLAN RULE
-          ================================================================
-
-          If requirements are sufficiently clear, produce:
-
-          # AI Implementation Plan
-
-          ## Understanding
-
-          ...
+          Explain what the issue is asking for.
 
           ## Requirements
 
-          - [ ] ...
+          List the concrete functional and technical requirements.
 
-          ## Acceptance Criteria
+          ## Acceptance criteria
 
-          - [ ] ...
+          Provide objective criteria that can be used to determine whether
+          the implementation is correct.
 
-          ## Current Architecture
+          ## Proposed architecture
 
-          ...
+          Explain how the change should fit into the existing codebase.
 
-          ## Proposed Implementation
+          ## Proposed changes
 
-          ### 1. ...
-
-          ### 2. ...
-
-          ### 3. ...
-
-          ## Files Expected To Change
-
-          - `src/...`
-          - `include/...`
-          - `test/...`
+          List the files/components that should be changed and what should
+          change in each.
 
           ## Tests
 
-          ### Unit tests
+          Describe unit tests, integration tests, PlatformIO tests, or other
+          automated validation that should be added or modified.
 
-          ...
+          ## Hardware validation
 
-          ### Integration tests
+          Clearly identify anything that cannot be fully validated on the
+          GitHub Actions runner and requires physical ESP32 hardware.
 
-          ...
+          ## Risks and edge cases
 
-          ### PlatformIO builds
+          Identify important failure modes, compatibility concerns, timing
+          issues, memory concerns, persistence/NVS concerns, concurrency
+          issues, or other risks relevant to this project.
 
-          ...
+          ## Definition of done
 
-          ### Hardware tests
-
-          ...
-
-          ## Risks / Assumptions
-
-          ...
-
-          ## Definition of Done
-
-          - [ ] Requirements implemented
-          - [ ] Tests added/updated
-          - [ ] PlatformIO build passes
-          - [ ] Relevant tests pass
-          - [ ] Acceptance criteria verified
+          Give a concise checklist describing when the implementation should
+          be considered complete.
 
           End with:
 
-          ## Approval Required
+          Human approval required.
 
-          Implementation will NOT start until the repository owner comments:
+          To approve this plan, comment:
 
           /approve-plan
+
+          Do not implement anything during this phase.
           EOF
 
+          echo "Running Copilot analysis..."
+
           copilot \
-            --prompt "$(cat .ai/prompt.txt)" \
-            --allow-tool 'shell' \
-            --allow-tool 'read' \
+            -p "$(cat .ai/prompt.txt)" \
+            -s \
+            --no-ask-user \
+            --allow-tool='shell' \
+            --allow-tool='read' \
             > .ai/plan.txt
 
-      # ------------------------------------------------------------
-      # Publish result
-      # ------------------------------------------------------------
+          echo "===== Copilot output ====="
+          cat .ai/plan.txt
 
-      - name: Publish AI analysis
+      - name: Publish clarification request
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
@@ -338,32 +242,44 @@ jobs:
         run: |
           set -euo pipefail
 
-          if grep -q "AI Clarification Required" .ai/plan.txt; then
-
-            gh issue comment "$ISSUE_NUMBER" \
-              --repo "$REPOSITORY" \
-              --body-file .ai/plan.txt
-
-            gh issue edit "$ISSUE_NUMBER" \
-              --repo "$REPOSITORY" \
-              --add-label "ai-clarifying"
-
-            gh issue edit "$ISSUE_NUMBER" \
-              --repo "$REPOSITORY" \
-              --remove-label "ai-task" || true
-
-          else
-
-            gh issue comment "$ISSUE_NUMBER" \
-              --repo "$REPOSITORY" \
-              --body-file .ai/plan.txt
-
-            gh issue edit "$ISSUE_NUMBER" \
-              --repo "$REPOSITORY" \
-              --add-label "ai-awaiting-approval"
-
-            gh issue edit "$ISSUE_NUMBER" \
-              --repo "$REPOSITORY" \
-              --remove-label "ai-task" || true
-
+          if ! grep -q '^AI Clarification Required' .ai/plan.txt; then
+            exit 0
           fi
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file .ai/plan.txt
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-clarifying" \
+            --remove-label "ai-task"
+
+      - name: Publish implementation plan
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -q '^AI Clarification Required' .ai/plan.txt; then
+            exit 0
+          fi
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file .ai/plan.txt
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-awaiting-approval" \
+            --remove-label "ai-task"
+
+      - name: Clean temporary AI files
+        if: always()
+        shell: bash
+        run: |
+          rm -rf .ai
