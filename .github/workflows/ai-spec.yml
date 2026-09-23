@@ -8,8 +8,8 @@ on:
 
 jobs:
   copilot_spec_phase:
-    # Keep the job condition simple: only check the label and author
-    if: contains(github.event.issue.labels.*.name, 'ai-task') && github.actor == 'mauicoder'
+    # Run only if 'ai-task' label is present, actor is mauicoder, AND 'approved' label is NOT present
+    if: contains(github.event.issue.labels.*.name, 'ai-task') && !contains(github.event.issue.labels.*.name, 'approved') && github.actor == 'mauicoder'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -21,21 +21,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Check if Comment is Approval (Halt Spec Phase if Approved)
-        if: github.event_name == 'issue_comment'
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          CLEAN_COMMENT=$(echo "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]' | tr -d '[:punct:]' | xargs)
-          echo "Processed comment: '$CLEAN_COMMENT'"
-          
-          if [ "$CLEAN_COMMENT" = "approved" ]; then
-            echo "Approval detected! Halting spec phase so implementation workflow can take over."
-            exit 0
-          else
-            echo "Not an approval. Continuing with spec discussion cycle..."
-          fi
 
       - name: Install Node.js & Copilot CLI
         uses: actions/setup-node@v4
@@ -87,6 +72,6 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "🤖 **Copilot Architect (Spec Phase)**:\n\n" + planText + "\n\n👉 **Reply with `approved` when requirements are finalized.**"
+              body: "🤖 **Copilot Architect (Spec Phase)**:\n\n" + planText + "\n\n👉 **Add the `approved` label to this issue when requirements are finalized.**"
             });
             
