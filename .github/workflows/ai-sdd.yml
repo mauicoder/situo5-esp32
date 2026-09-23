@@ -1,0 +1,1202 @@
+name: AI - Spec Driven Development
+
+on:
+  issues:
+    types:
+      - labeled
+      - reopened
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  copilot-requests: write
+
+concurrency:
+  group: ai-sdd-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+
+jobs:
+
+  # ============================================================
+  # START SDD
+  #
+  # Trigger:
+  #   Add the "ai-task" label to an issue.
+  #
+  # Produces:
+  #   .ai/spec.md
+  #
+  # Then waits for:
+  #   /approve-spec
+  # ============================================================
+
+  specify:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event_name == 'issues' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'ai-task'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Copilot CLI
+        run: |
+          npm install -g @github/copilot
+
+      - name: Ensure SDD labels exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh label create "ai-task" \
+            --repo "$REPOSITORY" \
+            --color "1D76DB" \
+            --description "Issue selected for AI SDD workflow" \
+            --force
+
+          gh label create "ai-spec" \
+            --repo "$REPOSITORY" \
+            --color "5319E7" \
+            --description "SDD specification is being prepared" \
+            --force
+
+          gh label create "ai-awaiting-spec-approval" \
+            --repo "$REPOSITORY" \
+            --color "D4C5F9" \
+            --description "SDD specification awaits human approval" \
+            --force
+
+          gh label create "ai-plan" \
+            --repo "$REPOSITORY" \
+            --color "7057FF" \
+            --description "SDD technical plan is being prepared" \
+            --force
+
+                      gh label create "ai-awaiting-plan-approval" \
+            --repo "$REPOSITORY" \
+            --color "C2E0C6" \
+            --description "SDD plan awaits human approval" \
+            --force
+
+          gh label create "ai-tasks" \
+            --repo "$REPOSITORY" \
+            --color "BFDADC" \
+            --description "SDD implementation tasks are being prepared" \
+            --force
+
+          gh label create "ai-awaiting-tasks-approval" \
+            --repo "$REPOSITORY" \
+            --color "FBCA04" \
+            --description "SDD task list awaits human approval" \
+            --force
+
+          gh label create "ai-implementing" \
+            --repo "$REPOSITORY" \
+            --color "F9D0C4" \
+            --description "AI is implementing approved SDD tasks" \
+            --force
+
+          gh label create "ai-converging" \
+            --repo "$REPOSITORY" \
+            --color "F9D0C4" \
+            --description "AI is checking implementation against SDD artifacts" \
+            --force
+
+          gh label create "ai-pr" \
+            --repo "$REPOSITORY" \
+            --color "0E8A16" \
+            --description "AI implementation PR created" \
+            --force
+
+          gh label create "ai-failed" \
+            --repo "$REPOSITORY" \
+            --color "D93F0B" \
+            --description "AI SDD workflow failed" \
+            --force
+
+      - name: Fetch issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .ai
+
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --comments \
+            > .ai/issue.txt
+
+      - name: Generate specification
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          cat > .ai/spec-prompt.txt <<'EOF'
+          You are the SPECIFICATION phase of a Spec-Driven Development
+          workflow.
+
+          DO NOT IMPLEMENT ANYTHING.
+
+          DO NOT:
+          - modify application source code
+          - create implementation code
+          - create a branch
+          - commit
+          - push
+          - create a pull request
+          - claim implementation work is complete
+
+          Your only job is to transform the GitHub issue into a precise,
+          testable software specification.
+
+          This repository is a C++ ESP32 project using PlatformIO.
+
+          Read:
+          - the complete GitHub issue
+          - all issue comments
+          - repository structure
+          - platformio.ini
+          - relevant existing documentation
+          - relevant existing source and tests
+
+          Create:
+                    .ai/spec.md
+
+          The specification MUST contain:
+
+          # Specification
+
+          ## Problem
+
+          What problem is being solved and why?
+
+          ## Scope
+
+          What is explicitly included?
+
+          ## Non-goals
+
+          What is explicitly NOT part of this work?
+
+          ## User stories
+
+          Describe the observable user-facing behavior.
+
+          ## Functional requirements
+
+          Every requirement must be concrete and testable.
+
+          Give each requirement an ID:
+
+          FR-001
+          FR-002
+          FR-003
+          ...
+
+          ## Non-functional requirements
+
+          Include relevant:
+          - performance
+          - memory
+          - reliability
+          - persistence
+          - compatibility
+          - security
+          - hardware constraints
+
+          ## Acceptance criteria
+
+          Every acceptance criterion must have an ID:
+
+          AC-001
+          AC-002
+          AC-003
+          ...
+
+          Each criterion must be objectively verifiable.
+
+          ## Hardware requirements
+
+          Explicitly identify anything requiring physical ESP32 hardware.
+
+          ## Test requirements
+
+          For every functional requirement and acceptance criterion,
+          identify how it can be verified.
+
+          ## Constraints
+
+          Record constraints discovered in the existing repository.
+
+          ## Ambiguities
+
+          If something cannot be specified safely from the issue and
+          repository, list it explicitly.
+          
+          
+          IMPORTANT:
+
+          Do not silently fill in missing requirements.
+
+          If critical information is missing, put:
+
+          SPECIFICATION CLARIFICATION REQUIRED
+
+          at the beginning of the file and list the exact questions.
+
+          Otherwise put:
+
+          SPECIFICATION READY FOR REVIEW
+
+          at the beginning.
+
+          The specification is the source of truth for all later phases.
+          EOF
+
+          copilot \
+            -p "$(cat .ai/spec-prompt.txt)" \
+            -s \
+            --no-ask-user \
+            --allow-tool='shell' \
+            --allow-tool='read' \
+            --allow-tool=write
+
+          echo "===== SPECIFICATION ====="
+          cat .ai/spec.md
+
+      - name: Publish specification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file .ai/spec.md
+
+          if grep -q '^SPECIFICATION CLARIFICATION REQUIRED' .ai/spec.md; then
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$REPOSITORY" \
+              --add-label "ai-spec" \
+              --remove-label "ai-task"
+
+            exit 0
+          fi
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-awaiting-spec-approval" \
+            --remove-label "ai-task"
+
+      - name: Save specification to branch
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git fetch origin
+
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$BRANCH:$BRANCH"
+            git checkout "$BRANCH"
+          else
+            git checkout -b "$BRANCH"
+          fi
+
+          mkdir -p ".ai/sdd/issue-${ISSUE_NUMBER}"
+
+          cp .ai/spec.md \
+            ".ai/sdd/issue-${ISSUE_NUMBER}/spec.md"
+
+          git add ".ai/sdd/issue-${ISSUE_NUMBER}/spec.md"
+
+          git commit \
+            -m "AI SDD: add specification for issue #${ISSUE_NUMBER}" \
+            || true
+
+          git push \
+            --set-upstream \
+            origin \
+            "$BRANCH"
+
+      - name: Clean temporary files
+        if: always()
+        run: |
+          rm -rf .ai
+
+
+  #  # ============================================================
+  # PLAN
+  #
+  # Trigger:
+  #   /approve-spec
+  #
+  # Produces:
+  #   plan.md
+  #
+  # Then waits for:
+  #   /approve-plan
+  # ============================================================
+
+  plan:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event_name == 'issue_comment' &&
+      github.event.comment.body == '/approve-spec' &&
+      contains(github.event.issue.labels.*.name, 'ai-awaiting-spec-approval') &&
+      github.event.comment.user.login == github.repository_owner
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Copilot CLI
+        run: |
+          npm install -g @github/copilot
+
+      - name: Fetch issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .ai
+
+          gh issue view "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --comments \
+            > .ai/issue.txt
+
+      - name: Fetch SDD branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git fetch origin "$BRANCH:$BRANCH"
+          git checkout "$BRANCH"
+
+      - name: Generate technical plan
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p ".ai/sdd/issue-${ISSUE_NUMBER}"
+
+          cat > .ai/plan-prompt.txt <<'EOF'
+          You are the PLAN phase of a Spec-Driven Development workflow.
+
+          The specification has been explicitly approved by a human.
+
+          DO NOT IMPLEMENT APPLICATION CODE.
+
+          Read:
+
+          .ai/sdd/issue-*/spec.md
+          .ai/issue.txt
+          platformio.ini
+          existing source
+          existing tests
+          existing documentation
+
+          Create:
+
+          .ai/sdd/issue-*/plan.md
+
+          The plan MUST trace every requirement and acceptance criterion
+          from the specification.
+
+          Include:
+
+          # Technical Plan
+
+          ## Architecture
+
+          ## Existing code affected
+
+          ## New components
+
+          ## Data structures and interfaces
+
+          ## Persistence / NVS design
+
+          ## Browser / web behavior where applicable
+
+          ## CLI behavior where applicable
+
+          ## Firmware behavior where applicable
+
+          ## Error handling
+
+          ## Compatibility
+
+          ## Testing strategy
+
+          ## Hardware validation strategy
+
+          ## Requirement traceability
+
+          Create a table:
+
+          Requirement | Design decision | Files | Test
+
+          Every FR-* and AC-* MUST appear.
+
+          ## Implementation risks
+
+          ## Explicit non-goals
+
+          
+          IMPORTANT:
+
+          If any requirement cannot be mapped to a concrete implementation
+          and verification method, write:
+
+          PLAN CLARIFICATION REQUIRED
+
+          Do not silently omit requirements.
+
+          End with:
+
+          PLAN READY FOR REVIEW
+
+          only if every requirement is covered.
+          EOF
+
+          copilot \
+            -p "$(cat .ai/plan-prompt.txt)" \
+            -s \
+            --no-ask-user \
+            --allow-tool='shell' \
+            --allow-tool='read' \
+            --allow-tool=write
+
+          echo "===== PLAN ====="
+          cat ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+      - name: Validate plan traceability
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          PLAN=".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+          if grep -q '^PLAN CLARIFICATION REQUIRED' "$PLAN"; then
+            echo "Plan requires clarification."
+            exit 1
+          fi
+
+          if ! grep -q '^PLAN READY FOR REVIEW' "$PLAN"; then
+            echo "Plan did not reach READY state."
+            exit 1
+          fi
+
+      - name: Commit plan
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          git add ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+          git commit \
+            -m "AI SDD: add technical plan for issue #${ISSUE_NUMBER}" \
+            || true
+
+          git push
+
+      - name: Publish plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-awaiting-plan-approval" \
+            --remove-label "ai-awaiting-spec-approval"
+
+
+  # ============================================================
+  # TASKS
+  #
+  # Trigger:
+  #   /approve-plan
+  #
+  # Produces:
+  #   tasks.md
+  #
+  # Then waits for:
+  #   /approve-tasks
+  # ============================================================
+
+  
+  tasks:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event_name == 'issue_comment' &&
+      github.event.comment.body == '/approve-plan' &&
+      contains(github.event.issue.labels.*.name, 'ai-awaiting-plan-approval') &&
+      github.event.comment.user.login == github.repository_owner
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Copilot CLI
+        run: |
+          npm install -g @github/copilot
+
+      - name: Fetch SDD branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git fetch origin "$BRANCH:$BRANCH"
+          git checkout "$BRANCH"
+
+      - name: Generate implementation tasks
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          cat > .ai/tasks-prompt.txt <<'EOF'
+          You are the TASK DECOMPOSITION phase of a Spec-Driven Development
+          workflow.
+
+          Read:
+
+          .ai/sdd/issue-*/spec.md
+          .ai/sdd/issue-*/plan.md
+
+          Create:
+
+          .ai/sdd/issue-*/tasks.md
+
+          Break the implementation into small, independently verifiable
+          tasks.
+
+          IMPORTANT:
+
+          Every functional requirement and acceptance criterion MUST map to
+          one or more tasks.
+
+          Every task MUST contain:
+
+          - Task ID
+          - requirement IDs
+          - exact objective
+          - files/components affected
+          - implementation work
+          - automated verification
+          - hardware verification if applicable
+          - dependencies
+
+          Prefer tasks that can be implemented and verified independently.
+
+          Do NOT combine a large browser feature, CLI feature, NVS feature,
+          and firmware feature into one task.
+
+          Example:
+
+          T001 Define configuration data contract
+          T002 Implement configuration serialization
+          T003 Add serialization tests
+          T004 Implement NVS merge
+          T005 Add NVS preservation tests
+
+          rather than one task called:
+
+          "Implement configuration system."
+
+          Include:
+
+          # Tasks
+
+          ## Dependency graph
+
+          ## Tasks
+
+          ## Requirement coverage matrix
+
+          Requirement | Task(s) | Test(s)
+
+          ## Hardware validation tasks
+
+          ## Final integration task
+
+          Every FR-* and AC-* must appear in the coverage matrix.
+
+          No implementation may begin until every requirement has a task.
+
+          End with:
+
+          TASKS READY FOR REVIEW
+          EOF
+
+          copilot \
+            -p "$(cat .ai/tasks-prompt.txt)" \
+            -s \
+            --no-ask-user \
+            --allow-tool='shell' \
+            --allow-tool='read' \
+            --allow-tool=write
+
+          echo "===== TASKS ====="
+          cat ".ai/sdd/issue-${ISSUE_NUMBER}/tasks.md"
+
+      - name: Validate task coverage
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          TASKS=".ai/sdd/issue-${ISSUE_NUMBER}/tasks.md"
+
+          if ! grep -q '^TASKS READY FOR REVIEW' "$TASKS"; then
+            echo "Tasks are not ready for review."
+            exit 1
+          fi
+
+          if ! grep -q 'Requirement coverage matrix' "$TASKS"; then
+            echo "Missing requirement coverage matrix."
+            exit 1
+          fi
+
+          if ! grep -q '^T001' "$TASKS"; then
+            echo "No implementation tasks found."
+            exit 1
+          fi
+
+      - name: Commit tasks
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          git add ".ai/sdd/issue-${ISSUE_NUMBER}/tasks.md"
+
+          git commit \
+            -m "AI SDD: add implementation tasks for issue #${ISSUE_NUMBER}" \
+            || true
+
+          git push
+
+      - name: Publish tasks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file ".ai/sdd/issue-${ISSUE_NUMBER}/tasks.md"
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-awaiting-tasks-approval" \
+            --remove-label "ai-awaiting-plan-approval"
+
+  # ============================================================
+  # IMPLEMENT + CONVERGE
+  #
+  # Trigger:
+  #   /approve-tasks
+  #
+  # This is deliberately different from the old implementation.
+  #
+  # The agent:
+  #
+  #   1. Reads spec/plan/tasks
+  #   2. Implements tasks in dependency order
+  #   3. Runs tests
+  #   4. Performs convergence analysis
+  #   5. Adds missing tasks when requirements are missing
+  #   6. Implements those tasks
+  #   7. Repeats
+  #
+  # Maximum 5 convergence cycles.
+  #
+  # PR is created ONLY after CONVERGED.
+  # ============================================================
+
+  implement:
+    if: >
+      github.event.issue.pull_request == null &&
+      github.event_name == 'issue_comment' &&
+      github.event.comment.body == '/approve-tasks' &&
+      contains(github.event.issue.labels.*.name, 'ai-awaiting-tasks-approval') &&
+      github.event.comment.user.login == github.repository_owner
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Install Copilot CLI
+        run: |
+          npm install -g @github/copilot
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch implementation branch
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          git fetch origin "$BRANCH:$BRANCH"
+          git checkout "$BRANCH"
+
+      - name: Mark implementation started
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-implementing" \
+            --remove-label "ai-awaiting-tasks-approval"
+
+      - name: Implement and converge
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MAX_CYCLES=5
+
+          for CYCLE in $(seq 1 "$MAX_CYCLES"); do
+
+            echo
+            echo "============================================================"
+            echo "SDD IMPLEMENTATION / CONVERGENCE CYCLE $CYCLE / $MAX_CYCLES"
+            echo "============================================================"
+            echo
+
+            cat > .ai-implementation-prompt.txt <<'EOF'
+            You are the IMPLEMENTATION phase of a Spec-Driven Development
+            workflow.
+
+            Read these artifacts before doing anything:
+
+            .ai/sdd/issue-*/spec.md
+            .ai/sdd/issue-*/plan.md
+            .ai/sdd/issue-*/tasks.md
+
+            These documents are the source of truth.
+
+            IMPORTANT RULES:
+
+            1. Implement tasks in dependency order.
+
+            2. Do NOT skip a task because another task appears more
+               interesting.
+
+            3. Before implementing a task, identify:
+               - its task ID
+               - its requirement IDs
+               - its acceptance criteria
+               - its required tests
+
+            4. After implementing each task:
+               - run its specific tests
+               - inspect the resulting behavior
+               - verify the requirement is actually satisfied
+
+            5. Do not mark a task complete merely because code exists.
+
+            6. A documentation requirement requires documentation changes.
+
+            7. A manifest requirement requires generated/check-in artifacts.
+
+            8. A browser flashing requirement requires actual browser flashing
+               logic, not merely configuration collection.
+
+            9. A persistence requirement requires testing preservation and
+               merge behavior.
+
+            10. A hardware requirement must be explicitly identified as
+                hardware validation if CI cannot perform it.
+
+            11. Do not weaken tests to make them pass.
+
+            12. Do not remove existing functionality unless the specification
+                explicitly requires it.
+
+            13. Do not commit or push.
+
+            14. Do not create a pull request.
+
+            WORKING METHOD:
+
+            - Inspect the current repository before modifying anything.
+            - Find the first incomplete task.
+            - Implement it completely.
+            - Add/modify its tests.
+            - Run the relevant tests.
+            - Continue through the task list.
+            - If a task depends on an earlier task, finish the dependency first.
+
+            For every completed task, append a short implementation record
+            to:
+
+            .ai/sdd/issue-*/implementation-log.md
+
+            Each record must contain:
+
+            Task:
+            Requirements:
+            Files:
+            Tests:
+            Result:
+
+            At the end, run:
+
+            pio run
+
+            and, when tests exist:
+
+            pio test
+
+            Do not claim success unless the commands actually pass.
+            EOF
+
+            copilot \
+              -p "$(cat .ai-implementation-prompt.txt)" \
+              -s \
+              --no-ask-user \
+              --allow-tool='shell' \
+              --allow-tool='read' \
+              --allow-tool=write
+
+            echo
+            echo "===== BUILD ====="
+
+            pio run
+
+            if [ -d test ]; then
+              echo
+              echo "===== PLATFORMIO TESTS ====="
+              pio test
+            fi
+
+            echo
+            echo "===== CONVERGENCE ANALYSIS ====="
+
+            cat > .ai-converge-prompt.txt <<'EOF'
+            You are the CONVERGENCE phase of a Spec-Driven Development
+            workflow.
+
+            DO NOT modify application source code.
+
+            
+            Read:
+
+            .ai/sdd/issue-*/spec.md
+            .ai/sdd/issue-*/plan.md
+            .ai/sdd/issue-*/tasks.md
+            .ai/sdd/issue-*/implementation-log.md
+
+            Also inspect the actual repository.
+
+            Your job is to determine whether the implementation actually
+            satisfies the specification, plan, and every task.
+
+            Be skeptical.
+
+            Do NOT infer that a requirement is satisfied merely because:
+            - a function exists
+            - a file exists
+            - a test exists
+            - a comment claims it works
+            - a generated artifact exists
+
+            Verify the actual behavior and traceability.
+
+            Pay special attention to:
+
+            - browser behavior
+            - CLI behavior
+            - firmware behavior
+            - generated artifacts
+            - configuration serialization
+            - NVS read/modify/write behavior
+            - preservation of existing data
+            - offsets for every PlatformIO environment
+            - validation rules
+            - documentation requirements
+            - tests
+            - hardware requirements
+
+            For each requirement and acceptance criterion determine:
+
+            SATISFIED
+            PARTIAL
+            MISSING
+            CONTRADICTED
+
+            If anything is PARTIAL, MISSING, or CONTRADICTED, append concrete
+            remediation tasks to:
+
+            .ai/sdd/issue-*/tasks.md
+
+            New tasks MUST:
+
+            - have unique IDs
+            - reference the unmet requirement
+            - describe exactly what is missing
+            - describe required tests
+            - identify hardware validation where applicable
+
+            If all requirements are genuinely satisfied, create:
+
+            .ai/sdd/issue-*/CONVERGED
+
+            containing:
+
+            CONVERGED
+
+            Then provide a concise requirement-by-requirement verification
+            report.
+
+            Do not modify application code.
+            EOF
+
+            rm -f ".ai/sdd/issue-${ISSUE_NUMBER}/CONVERGED"
+
+            copilot \
+              -p "$(cat .ai-converge-prompt.txt)" \
+              -s \
+              --no-ask-user \
+              --allow-tool='shell' \
+              --allow-tool='read' \
+              --allow-tool=write
+
+            if [ -f ".ai/sdd/issue-${ISSUE_NUMBER}/CONVERGED" ]; then
+              echo
+              echo "============================================================"
+              echo "SDD CONVERGED"
+              echo "============================================================"
+
+              cat ".ai/sdd/issue-${ISSUE_NUMBER}/CONVERGED"
+
+              break
+            fi
+
+            echo
+            echo "Convergence found remaining work."
+            echo "A new implementation cycle will begin."
+
+            git add ".ai/sdd/issue-${ISSUE_NUMBER}/tasks.md" \
+                    ".ai/sdd/issue-${ISSUE_NUMBER}/implementation-log.md" \
+                    || true
+
+            git commit \
+              -m "AI SDD: convergence tasks for issue #${ISSUE_NUMBER}" \
+              || true
+
+            git push
+
+          done
+
+          if [ ! -f ".ai/sdd/issue-${ISSUE_NUMBER}/CONVERGED" ]; then
+            echo
+            echo "Maximum SDD convergence cycles reached."
+            echo "Implementation is NOT considered complete."
+            exit 1
+          fi
+
+        
+      - name: Final validation
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          echo "===== FINAL BUILD ====="
+          pio run
+
+          if [ -d test ]; then
+            echo "===== FINAL TESTS ====="
+            pio test
+          fi
+
+          echo "===== REQUIREMENT ARTIFACTS ====="
+
+          test -f ".ai/sdd/issue-${ISSUE_NUMBER}/spec.md"
+          test -f ".ai/sdd/issue-${ISSUE_NUMBER}/plan.md"
+          test -f ".ai/sdd/issue-${ISSUE_NUMBER}/tasks.md"
+          test -f ".ai/sdd/issue-${ISSUE_NUMBER}/CONVERGED"
+
+      - name: Commit implementation
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+
+          git add -A
+
+          git commit \
+            -m "AI SDD: implement issue #${ISSUE_NUMBER}" \
+            || true
+
+          git push
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="ai/issue-${ISSUE_NUMBER}"
+
+          BASE="$(
+            gh repo view "$REPOSITORY" \
+              --json defaultBranchRef \
+              --jq '.defaultBranchRef.name'
+          )"
+
+          PR_URL="$(
+            gh pr create \
+              --repo "$REPOSITORY" \
+              --head "$BRANCH" \
+              --base "$BASE" \
+              --title "AI SDD: implement issue #${ISSUE_NUMBER}" \
+              --body "## Spec-Driven Development
+
+          This pull request was generated only after the SDD implementation
+          reached convergence.
+
+          ### Artifacts
+
+          - Specification
+          - Technical plan
+          - Requirement/task traceability
+          - Implementation log
+          - Convergence verification
+
+          ### Automated validation
+
+          - PlatformIO build: passed
+          - PlatformIO tests: passed where available
+          - SDD convergence: passed
+
+          ### Human review
+
+          Human review is required before merging.
+
+          Hardware validation identified by the SDD process must still be
+          performed manually where applicable.
+
+          Closes #${ISSUE_NUMBER}"
+          )"
+
+          echo "$PR_URL"
+
+          echo "PR_URL=$PR_URL" >> "$GITHUB_ENV"
+
+      - name: Update issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh issue edit "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-label "ai-pr" \
+            --remove-label "ai-implementing" \
+            --remove-label "ai-converging"
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body "SDD implementation converged successfully and a pull request was created:
+
+          $PR_URL
+
+          The PR requires human review and will not be merged automatically."
+          
+
+
+          
