@@ -1,4 +1,4 @@
-name: AI Phase 1 - Copilot Spec & Discussion
+name: AI Phase 1 - Spec & Discussion
 
 on:
   issues:
@@ -7,8 +7,7 @@ on:
     types: [created]
 
 jobs:
-  copilot_spec_phase:
-    # Run only if 'ai-task' label is present, actor is mauicoder, AND 'approved' label is NOT present
+  spec_phase:
     if: contains(github.event.issue.labels.*.name, 'ai-task') && !contains(github.event.issue.labels.*.name, 'approved') && github.actor == 'mauicoder'
     runs-on: ubuntu-latest
     permissions:
@@ -19,8 +18,26 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Fetch Issue Context via GitHub API
+        uses: actions/github-script@v7
         with:
-          fetch-depth: 0
+          script: async () => {
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issue_number = context.issue.number;
+
+            const issue = await github.rest.issues.get({ owner, repo, issue_number });
+            const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
+
+            let content = `ISSUE TITLE: ${issue.data.title}\n\nISSUE DESCRIPTION:\n${issue.data.body}\n\nDISCUSSION:\n`;
+            for (const c of comments.data) {
+              content += `[${c.user.login}]: ${c.body}\n`;
+            }
+
+            fs.writeFileSync('issue_context.txt', content);
+          }
 
       - name: Install Node.js & Copilot CLI
         uses: actions/setup-node@v4
@@ -30,48 +47,22 @@ jobs:
       - name: Install Copilot CLI
         run: npm install -g @github/copilot
 
-      - name: Gather Discussion & Run Copilot Analysis
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
+      - name: Run Copilot Analysis
         run: |
-          # 1. Fetch issue body and comments into context file
-          python3 -c '
-          import os, json, urllib.request
-          token = os.environ.get("GITHUB_TOKEN")
-          repo = os.environ.get("REPOSITORY")
-          issue_number = os.environ.get("ISSUE_NUMBER")
-          headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+          copilot -p "You are an expert C++ embedded software architect. Read issue_context.txt. Inspect src/ and platformio.ini. Provide a structured implementation plan and open questions. Do not write code yet." > copilot_spec.md
 
-          i_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}", headers=headers)).read().decode("utf-8"))
-          body = i_res.get("body", "")
-          c_res = json.loads(urllib.request.urlopen(urllib.request.Request(f"https://api.github.com/repos/{repo}/issues/{issue_number}/comments", headers=headers)).read().decode("utf-8"))
-
-          context = f"ISSUE DESCRIPTION:\n{body}\n\nDISCUSSION HISTORY:\n"
-          for c in c_res:
-              username = c["user"]["login"]
-              comment_body = c["body"]
-              context += f"[{username}] : {comment_body}\n"
-
-          with open("issue_context.txt", "w") as f:
-              f.write(context)
-          '
-
-          # 2. Run Copilot non-interactively using the -p flag and standard redirection
-          copilot -p "You are an expert embedded C++ software architect working on an ESP32 PlatformIO project. Read issue_context.txt for requirements and user feedback. Inspect the source code under src/ and platformio.ini. Provide a structured implementation plan and any open points or clarifications needed. Do not write code yet." > copilot_spec.md
-
-      - name: Post Copilot Plan to Issue
+      - name: Post Plan to Issue
         uses: actions/github-script@v7
         with:
-          script: |
+          script: async () => {
             const fs = require('fs');
-            let planText = fs.existsSync('copilot_spec.md') ? fs.readFileSync('copilot_spec.md', 'utf8') : "Failed to generate plan.";
+            const plan = fs.existsSync('copilot_spec.md') ? fs.readFileSync('copilot_spec.md', 'utf8') : "Failed to generate plan.";
             
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "🤖 **Copilot Architect (Spec Phase)**:\n\n" + planText + "\n\n👉 **Add the `approved` label to this issue when requirements are finalized.**"
+              body: `🤖 **AI Architect (Spec Phase)**:\n\n${plan}\n\n👉 **Add the `approved` label to this issue when ready for implementation.**`
             });
-            
+          }
+          
