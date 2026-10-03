@@ -11,58 +11,9 @@
 >
 > Oh.. and every contribution is welcome! ... even if it doesn't align with the rules described here! ;)
 
-- [Project Structure](#project-structure)
-  - [Documentation](#documentation)
-- [Contributing](#contributing)
-  - [Filling Issues](#filing-issues)
-  - [Making Changes](#making-changes)
-  - [Open a Pull Request](#open-a-pull-request)
-- [Guidelines](#guidelines)
-  - [Basic](#basics)
-    - [Revision Control Hygiene](#revision-control-hygiene)
-  - [Visual Studio Code](#visual-studio-code)
-    - [Tasks](#tasks)
-  - [Settings and Linter](#settings-and-linter)
-  - [Coding](#c)
-    - [CMake](#cmake)
-  - [Python](#python)
 
 <div align="center" width="100%">
 
-## Project Structure
-
-</div>
-
-``` ascii
-  ├───.cache         - Hidden: Build Cache
-  ├───.github        - GitHub Configs
-  ├───.pio           - Hidden: PlatformIO Cache
-  ├───.private       - Hidden: Private Data
-  ├───.trunk         - Hidden: Trunk Cache
-  ├───.vscode        - VSCode Workspace Settings
-  ├───docs           - Documentation Root
-  │   ├───assets     - Documentation: Support Files (eg.: pictures, stylesheets, etc.)
-  │   ├───datasheets - Documentation: Relevant Datasheets
-  │   ├───devices    - Documentation: OEM Devices
-  │   ├───firmware   - Documentation: Docs + Files
-  │   ├───parameter  - Decompiled (LuaJIT) io-homecontrol daemon
-  │   └───reference  - Reference Products/Values: Info in the folder READMEs
-  │       ├───Si446x - Si446x RE (used in the Cozytouch and other)
-  │       └───Skitter- Decompiled Somfy Skitter Source (ActionScript) + Firmware
-  ├───extras         - Data to be included in the firmware
-  ├───include        - Project Header Files
-  ├───lib            - Project Specific Private Libraries (eg. LoRa32)
-  ├───scripts        - Extra Script files either for the project or the lib
-  │   ├───ci         - CI Scripts
-  │   ├───GNURadio   - GNURadio Scripts
-  │   ├───IDAPro     - IDA Pro and Ghidra Firmware Helper
-  │   ├───LuaJIT     - io-homecontrol daemon LuaJIT decompiler
-  │   ├───renode     - Renode Emulation for the io-homecontrol firmware
-  │   ├───rtl_433    - Latest rtl_433 binary and configuration
-  │   └───SVD        - Custom built SVD (STM32F103) use with the ioHome firmware
-  └───src            - Library Source Code
-      └───protocols  - RadioLib Protocol Implementation
-```
 
 ## Documentation <!-- TODO show simple examples (or link to them) for Alerts -->
 
