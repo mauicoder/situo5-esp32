@@ -1,0 +1,67 @@
+{
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "name": "situo5-esp32",
+  "version": "0.6.9",
+  "description": "io-homecontrol lib",
+  "keywords": "io-homecontrol, somfy, velux, LoRa32, iown, iohome",
+  "homepage": "https://github.com/mauicoder/situo5-esp32",
+  "license": "CC-BY-SA-4.0",
+  "platforms": "espressif32",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mauicoder/situo5-esp32"
+  },
+  "authors": [
+    {
+      "name": "mauicoder",
+      "email": "mauicoder@users.noreply.github.com",
+      "url": "https://github.com/mauicoder",
+      "maintainer": true
+    }
+  ],
+  "dependencies": [
+    {
+      "name": "RadioLib",
+      "version": "https://github.com/jgromes/RadioLib"
+    }
+  ],
+  "frameworks": [
+    "arduino",
+    "espidf"
+  ],
+  "build": {
+    "libLDFMode": "deep+"
+  }
+  // "examples": [
+  //   {
+  //     "name": "1W Remote",
+  //     "base": "examples/oneway",
+  //     "files": [
+  //       "platformio.ini",
+  //       "include/iown_homecontrol.h",
+  //       "examples/oneway/oneway.c",
+  //       "README.md"
+  //     ]
+  //   },
+  //   {
+  //     "name": "2W Remote",
+  //     "base": "examples/twoway",
+  //     "files": [
+  //       "platformio.ini",
+  //       "include/iown_homecontrol.h",
+  //       "examples/twoway/twoway.c",
+  //       "README.md"
+  //     ]
+  //   },
+  //   {
+  //     "name": "Gateway",
+  //     "base": "examples/gateway",
+  //     "files": [
+  //       "platformio.ini",
+  //       "include/iown_homecontrol.h",
+  //       "examples/gateway.c",
+  //       "README"
+  //     ]
+  //   }
+  // ]
+}

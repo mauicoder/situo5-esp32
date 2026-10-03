@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://github.com/SchemaStore/schemastore/raw/master/src/schemas/json/github-issue-forms.json
+
+name: Feature/Fix Request
+description: "Request a feature or documentation fix."
+title: "[feat]: "
+labels: ["enhancement"]
+
+# TODO https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/adding-items-automatically
+# projects: ['situo5-esp32/1', 'situo5-esp32/44']
+
+assignees:
+  - mauicoder
+
+body:
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "Description of the feature you're suggesting."
+      description: |
+        Please describe your feature request in as many details as possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else?
+      description: If anything else you want to share.

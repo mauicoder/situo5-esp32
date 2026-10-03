@@ -1,0 +1,34 @@
+{ // https: //docs.npmjs.com/cli/v10/configuring-npm/package-json
+  "author": "mauicoder <mauicoder@users.noreply.github.com> (https://github.com/mauicoder/)",
+  "bugs": {
+    "url": "https://github.com/mauicoder/situo5-esp32/issues/"
+  },
+  "description": "io-homecontrol library",
+  "homepage": "https://github.com/mauicoder/situo5-esp32#readme",
+  // "funding": [
+  // "https://opencollective.com/situo5-esp32"
+  // {
+  //   "type": "patreon",
+  //   "url": "https://www.patreon.com/my-account"
+  // }
+  // ],
+  "keywords": [
+    "situo5-esp32",
+    "io-homecontrol",
+    "somfy",
+    "velux"
+  ],
+  "license": "MIT",
+  "name": "situo5-esp32",
+  "private": true,
+  "repository": {
+    "directory": ".vscode",
+    "type": "git",
+    "url": "https://github.com/mauicoder/situo5-esp32.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "0.6.9",
+  "data": "2024-05-01"
+}
