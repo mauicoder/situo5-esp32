@@ -3,6 +3,7 @@
 #include <PubSubClient.h>
 #include "hal/BoardHAL.h"
 #include "ConfigManager.h"
+#include "DiagManager.h"
 #include "IoHomeStreamParser.h" // Needed for streamParser extern
 
 extern IoHomeNode ioNode;
@@ -152,6 +153,18 @@ void reconnect() {
 
             String subTopic = String(currentConfig.baseTopic) + "/cover/+/set";
             mqttClient.subscribe(subTopic.c_str());
+
+            DiagManager::onMqttConnected();
+            if (DiagManager::hasPendingPublish()) {
+                String diagTopic = String(currentConfig.baseTopic) + "/diag";
+                String diagPayload = DiagManager::buildJsonPayload();
+                if (mqttClient.publish(diagTopic.c_str(), diagPayload.c_str(), true)) {
+                    Serial.printf("    [MQTT] Published diagnostic payload to %s\n", diagTopic.c_str());
+                    DiagManager::markPublished();
+                } else {
+                    Serial.println("    [MQTT] Failed to publish diagnostic payload");
+                }
+            }
         } else {
             Serial.print("Failed, rc=");
             Serial.print(mqttClient.state());

@@ -10,6 +10,7 @@
 #include "IoHomeCrypto.h"
 #include "IoHomeWebSniffer.h"
 #include "ConfigManager.h"
+#include "DiagManager.h"
 #include "IoHomeStreamParser.h"
 #include "hal/BoardHAL.h" // Include the hardware abstraction layer for board-specific configurations
 #include <WiFiProv.h>
@@ -140,11 +141,17 @@ void sysProvEvent(arduino_event_t *sys_event) {
             Serial.print("\n>>> Wi-Fi Connected! IP: ");
             Serial.println(WiFi.localIP());
             isProvisioning = false;
+            DiagManager::onWifiGotIp();
             updateDisplay();
+            break;
+        }
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: {
+            DiagManager::onWifiDisconnected(sys_event->event_info.wifi_sta_disconnected.reason);
             break;
         }
         case ARDUINO_EVENT_PROV_START: {
             isProvisioning = true;
+            DiagManager::onProvStarted();
             Serial.println("\n>>> Wi-Fi Provisioning Started.");
             Serial.println(">>> Use the 'ESP BLE Prov' App. Device: PROV_IoHome, PoP: iown1234");
             Serial.println(">>> Or scan the QR code below directly from the app:\n");
@@ -159,6 +166,7 @@ void sysProvEvent(arduino_event_t *sys_event) {
         }
         case ARDUINO_EVENT_PROV_CRED_SUCCESS:
             Serial.println("\n>>> Provisioning Successful!");
+            DiagManager::onProvCredSuccess();
             break;
         default:
             break;
@@ -190,11 +198,15 @@ void setup() {
   Serial.println(F("   HELTEC V3.2 IoHome NODE     "));
   Serial.println(F("==============================="));
 
+  DiagManager::init();
+
   ConfigManager::load(ioNode);
   MqttManager::begin(ConfigManager::mqttConfig);
 
   // Setup WiFi Provisioning
   WiFi.onEvent(sysProvEvent);
+  WiFi.mode(WIFI_STA);
+  DiagManager::recordWifiCredsPresent();
   WiFiProv.beginProvision(NETWORK_PROV_SCHEME_BLE, NETWORK_PROV_SCHEME_HANDLER_FREE_BTDM, NETWORK_PROV_SECURITY_1, "iown1234", "PROV_IoHome");
   webSniffer.begin();
 
@@ -258,6 +270,7 @@ void handleWifiHealing() {
     if (!isProvisioning && WiFi.status() != WL_CONNECTED) {
         if (millis() - wifiTimeoutTimer > 15000) {
             Serial.println("\n>>> Wi-Fi connection timed out! Wiping dead credentials and rebooting to Setup Mode... <<<");
+            DiagManager::onHealingRestart();
             WiFi.disconnect(false, true);
             delay(500);
             ESP.restart();
