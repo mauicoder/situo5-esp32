@@ -9,6 +9,7 @@
 
 ### PlatformIO ###
 .pio
+.platformio/
 compile_commands.*
 
 ### Visual Studio Code (VSCode) ###
